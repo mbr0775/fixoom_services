@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="location_header">SERVICE LOCATION</string>
+    <string name="location_choose">Choose your location</string>
+    <string name="location_change">Change service location</string>
+    <string name="location_loading">Loading location…</string>
+    <string name="location_finding">Finding your location…</string>
+    <string name="location_manual_badge">Manual</string>
+    <string name="location_gps_badge">GPS</string>
+    <string name="location_not_set_badge">Select</string>
+    <string name="location_attention_badge">Check</string>
+    <string name="location_sheet_title">Where do you need help?</string>
+    <string name="location_sheet_intro">Choose an area manually, or let your phone find it.</string>
+    <string name="location_use_device">Use my current location</string>
+    <string name="location_privacy">With your permission, GPS mode refreshes this area while Home is open. Android may use its geocoding service to find the area name. Fixoom saves only the area name on this device, not precise coordinates. No background tracking.</string>
+    <string name="location_search_label">Search or enter a city / area</string>
+    <string name="location_search_hint">City, area and country</string>
+    <string name="location_manual_help">Manual selection works without GPS. It stays selected until you change it.</string>
+    <string name="location_use_typed">Use “%1$s”</string>
+    <string name="location_area_list">Choose an area in Sri Lanka</string>
+    <string name="location_area_results">Matching areas</string>
+    <string name="location_no_matches">No matching area. Enter your city / area and country above to save it manually.</string>
+    <string name="location_invalid">Enter an area name between 2 and 80 characters.</string>
+    <string name="location_saved">Saved: %1$s</string>
+    <string name="location_load_failed">Could not load your saved location. Please try again.</string>
+    <string name="location_save_failed">Could not save this area. Your previous location has been kept. Please try again.</string>
+    <string name="location_permission_denied">Location permission is off. You can still choose an area manually, or allow location access in app settings.</string>
+    <string name="location_gps_disabled">Turn on your phone’s Location setting to detect your area. Your saved area is unchanged.</string>
+    <string name="location_settings_unavailable">Settings could not be opened. Open your phone’s Settings to enable Location or change app permissions.</string>
+    <string name="location_fix_failed">Your phone could not find a current location. Try again outdoors, or choose an area manually.</string>
+    <string name="location_name_unavailable">Location detected, but the area name is unavailable. Check your connection and retry, or choose an area manually.</string>
+    <string name="location_device_fallback">Current device location</string>
+    <string name="location_open_app_settings">Open app permissions</string>
+    <string name="location_open_gps_settings">Turn on Location</string>
+    <string name="location_retry">Retry GPS</string>
+    <string name="location_close">Close location selector</string>
+</resources>

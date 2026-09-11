@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="discovery_title">What do you need help with?</string>
+    <string name="discovery_subtitle">Find a service that fits your home.</string>
+    <string name="discovery_search_hint">Search services</string>
+    <string name="discovery_clear_search">Clear service search</string>
+    <string name="discovery_open_filters">Open service filters</string>
+    <string name="discovery_close_filters">Close service filters</string>
+    <string name="discovery_clear_filters">Clear filters</string>
+    <string name="discovery_remove_filter">Remove %1$s filter</string>
+    <string name="discovery_filter_title">Make it your search</string>
+    <string name="discovery_filter_subtitle">Refine services, your way</string>
+    <string name="discovery_categories">Service categories</string>
+    <string name="discovery_categories_hint">Choose more than one. Leave empty to include all.</string>
+    <string name="discovery_sort_title">Sort services</string>
+    <string name="discovery_sort_hint">Choose how your results are ordered.</string>
+    <string name="discovery_sort_default">Default order</string>
+    <string name="discovery_sort_az">Name: A–Z</string>
+    <string name="discovery_sort_za">Name: Z–A</string>
+    <string name="discovery_layout">Display style</string>
+    <string name="discovery_grid_view">Grid view</string>
+    <string name="discovery_list_view">List view</string>
+    <string name="discovery_reset">Reset</string>
+    <string name="discovery_search_context">Searching for: %1$s</string>
+    <string name="discovery_no_matches">No matching services</string>
+    <string name="discovery_no_matches_hint">Try fewer categories or change your search words.</string>
+    <string name="discovery_reset_search">Reset search and filters</string>
+    <plurals name="discovery_service_count">
+        <item quantity="one">%d service</item>
+        <item quantity="other">%d services</item>
+    </plurals>
+    <plurals name="discovery_show_services">
+        <item quantity="one">Show %d service</item>
+        <item quantity="other">Show %d services</item>
+    </plurals>
+    <plurals name="discovery_open_active_filters">
+        <item quantity="one">Open service filters, %d active filter</item>
+        <item quantity="other">Open service filters, %d active filters</item>
+    </plurals>
+</resources>
