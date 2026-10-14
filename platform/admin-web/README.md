@@ -42,3 +42,9 @@ The database test creates synthetic identities inside a transaction and rolls ev
 ## Delivery boundary
 
 The Android apps are installed on the Honor phone. Their existing customer booking UI still uses its in-memory BookingStore and sample providers. Provider dashboard job/profile actions still require wiring to the new shared database APIs. This admin application and database foundation do not establish payment processing, messaging, push notifications, or a completed production marketplace.
+
+## Remaining release checks
+
+The Supabase advisor reports leaked-password protection disabled. Review [Supabase password protection](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection) before production release. No schema/RLS warnings were reported after the foundation migration.
+
+The production dependency audit is clean. The development lint toolchain still reports the upstream braces/fast-glob advisory; a forced downgrade of Next.js ESLint configuration was not applied. See [the upstream advisory](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm). These tools are not production dependencies.
