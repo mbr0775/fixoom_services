@@ -1,6 +1,13 @@
 package com.fixoom.provider.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -14,6 +21,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.fixoom.core.model.AuthResult
 import com.fixoom.provider.ui.auth.ProviderAuthViewModel
+import com.fixoom.provider.ui.components.rememberProviderMotionAllowed
 import com.fixoom.provider.ui.screens.auth.ProviderEmailVerificationScreen
 import com.fixoom.provider.ui.screens.auth.ProviderForgotPasswordScreen
 import com.fixoom.provider.ui.screens.auth.ProviderLoginScreen
@@ -48,6 +56,8 @@ fun ProviderNavGraph(
 ) {
     val uiState by
     authViewModel.uiState.collectAsStateWithLifecycle()
+
+    val motionAllowed = rememberProviderMotionAllowed()
 
     var recoveryMode by rememberSaveable {
         mutableStateOf(passwordRecoveryLinkOpened)
@@ -145,7 +155,20 @@ fun ProviderNavGraph(
 
     NavHost(
         navController = navController,
-        startDestination = ProviderScreen.Splash.route
+        startDestination = ProviderScreen.Splash.route,
+        enterTransition = {
+            if (motionAllowed) fadeIn(tween(220)) + slideInHorizontally(tween(260)) { it / 12 }
+            else EnterTransition.None
+        },
+        exitTransition = { if (motionAllowed) fadeOut(tween(140)) else ExitTransition.None },
+        popEnterTransition = {
+            if (motionAllowed) fadeIn(tween(180)) + slideInHorizontally(tween(220)) { -it / 12 }
+            else EnterTransition.None
+        },
+        popExitTransition = {
+            if (motionAllowed) fadeOut(tween(140)) + slideOutHorizontally(tween(180)) { it / 12 }
+            else ExitTransition.None
+        }
     ) {
         composable(
             route = ProviderScreen.Splash.route
