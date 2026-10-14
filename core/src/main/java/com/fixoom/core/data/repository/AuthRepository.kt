@@ -268,7 +268,7 @@ class AuthRepository(
                 AuthResult.ProviderApprovalPending
             }
 
-            AccountStatus.SUSPENDED -> {
+            AccountStatus.SUSPENDED, AccountStatus.DELETED -> {
                 clearCurrentSession()
                 AuthResult.AccountSuspended
             }

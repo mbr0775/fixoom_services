@@ -17,7 +17,7 @@ data class Profile(
 
     val phone: String? = null,
 
-    @SerialName("avatar_url")
+    @SerialName("avatar_path")
     val avatarUrl: String? = null,
 
     @SerialName("created_at")
