@@ -278,6 +278,7 @@ async function overflow(page) {
     await denied.close();
     const context = await browser.newContext({
       viewport: { width: 1440, height: 1100 },
+      hasTouch: true,
       acceptDownloads: true,
     });
     await installMock(context);
@@ -297,6 +298,38 @@ async function overflow(page) {
         .getByRole("button", { name: new RegExp("^" + name) });
     await nav("Providers").click();
     await page.getByText("1–20 of 24 records").waitFor();
+    const statusFilter = page.getByRole("combobox", { name: "Filter status" });
+    await statusFilter.click();
+    await page.getByRole("option", { name: "Pending", exact: true }).click();
+    await page.getByText("1–4 of 4 records").waitFor();
+    await statusFilter.press("ArrowDown");
+    await statusFilter.press("Home");
+    await statusFilter.press("Enter");
+    await page.getByText("1–20 of 24 records").waitFor();
+    await statusFilter.press("Enter");
+    await statusFilter.press("Escape");
+    assert.equal(await statusFilter.getAttribute("aria-expanded"), "false");
+    await page.getByLabel("Search providers").focus();
+    await page.waitForFunction(
+      () =>
+        getComputedStyle(document.querySelector(".search-field"))
+          .borderColor === "rgb(25, 72, 80)",
+    );
+    assert.equal(
+      await page
+        .getByLabel("Search providers")
+        .evaluate((input) => getComputedStyle(input).outlineStyle),
+      "none",
+    );
+    assert.equal(
+      await page
+        .locator(".search-field")
+        .evaluate((field) => getComputedStyle(field).borderColor),
+      "rgb(25, 72, 80)",
+    );
+    await page.screenshot({
+      path: path.join(output, "search-focus-desktop-fixture.png"),
+    });
     await page.getByRole("button", { name: "Next", exact: true }).click();
     await page.getByText("21–24 of 24 records").waitFor();
     await page.getByRole("button", { name: "Previous", exact: true }).click();
@@ -345,13 +378,39 @@ async function overflow(page) {
     await page.getByRole("dialog").getByRole("alert").waitFor();
     failWrite = false;
     await page.getByRole("button", { name: "Go back" }).click();
-    await page.locator("tbody tr").first().getByRole("button", { name: "View booking" }).click();
-    await page.getByRole("button", { name: "Cancel booking", exact: true }).click();
+    await page
+      .locator("tbody tr")
+      .first()
+      .getByRole("button", { name: "View booking" })
+      .click();
+    await page
+      .getByRole("button", { name: "Cancel booking", exact: true })
+      .click();
     await page.getByRole("button", { name: "Confirm change" }).click();
     await page.getByText("Changes saved successfully.").waitFor();
     assert.equal(bookings[0].status, "cancelled");
     await nav("Activity").click();
     await page.getByText("1–1 of 1 records").waitFor();
+    await page.getByRole("combobox", { name: "Filter action" }).click();
+    await page.getByRole("listbox").waitFor();
+    await page.waitForFunction(
+      () =>
+        document.querySelector(".filter-menu") &&
+        getComputedStyle(document.querySelector(".filter-menu")).opacity ===
+          "1",
+    );
+    await page.screenshot({
+      path: path.join(output, "dropdown-desktop-fixture.png"),
+      animations: "disabled",
+    });
+    assert.equal(
+      await page
+        .getByRole("combobox", { name: "Filter action" })
+        .getAttribute("aria-expanded"),
+      "true",
+    );
+    await page.getByLabel("Search activity").click();
+    assert.equal(await page.getByRole("listbox").count(), 0);
     await page.getByRole("button", { name: "View event" }).click();
     await page.getByText("Event ID", { exact: true }).waitFor();
     await page.keyboard.press("Escape");
@@ -372,10 +431,14 @@ async function overflow(page) {
     await nav("Settings").click();
     await page.getByText("admin@example.test", { exact: true }).waitFor();
     await page.goBack();
-    await page.getByRole("heading", { name: "Service catalog", exact: true }).waitFor();
+    await page
+      .getByRole("heading", { name: "Service catalog", exact: true })
+      .waitFor();
     failRead = true;
     await nav("Bookings").click();
-    await page.getByRole("heading", { name: "Unable to load records" }).waitFor();
+    await page
+      .getByRole("heading", { name: "Unable to load records" })
+      .waitFor();
     failRead = false;
     await page.getByRole("button", { name: "Retry", exact: true }).click();
     await page.getByText("1–6 of 6 records").waitFor();
@@ -401,6 +464,25 @@ async function overflow(page) {
           await page.getByRole("button", { name: "Workspace menu" }).click();
         await nav(section).click();
         await overflow(page);
+        if (section === "Activity" && width <= 390) {
+          const filter = page.getByRole("combobox", { name: "Filter action" });
+          await filter.tap();
+          await page.getByRole("listbox").waitFor();
+          const box = await page.getByRole("listbox").boundingBox();
+          assert.ok(
+            box.x >= 0 && box.x + box.width <= width,
+            "Menu must fit the viewport",
+          );
+          await page.screenshot({
+            path: path.join(output, `dropdown-${width}-fixture.png`),
+            animations: "disabled",
+          });
+          await page
+            .getByRole("option", { name: "Provider review", exact: true })
+            .tap();
+          assert.equal(await filter.getAttribute("aria-expanded"), "false");
+          await page.getByText("1–1 of 1 records").waitFor();
+        }
       }
     }
     await page.emulateMedia({ reducedMotion: "reduce" });

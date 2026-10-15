@@ -41,11 +41,9 @@ button:disabled {
   opacity: 0.5;
 }
 button:focus-visible,
-a:focus-visible,
-input:focus-visible,
-select:focus-visible {
-  outline: 3px solid #668b28;
-  outline-offset: 4px;
+a:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: 2px;
 }
 a {
   color: inherit;
@@ -848,8 +846,16 @@ p {
   min-width: 0;
   width: 320px;
   color: #80938b;
+  transition:
+    border-color 140ms ease,
+    box-shadow 140ms ease;
+}
+.search-field:focus-within {
+  border-color: var(--teal);
+  box-shadow: 0 0 0 3px #19485014;
 }
 .search-field input {
+  outline: none;
   border: 0;
   background: transparent;
   min-width: 0;
@@ -863,7 +869,11 @@ p {
   gap: 9px;
   align-items: center;
 }
-.toolbar-actions select {
+.filter-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
   font-size: 11px;
   color: var(--ink);
   padding: 10px 12px;
@@ -871,7 +881,71 @@ p {
   border-radius: 7px;
   background: white;
   min-height: 42px;
-  max-width: 150px;
+  min-width: 152px;
+  transition:
+    border-color 140ms ease,
+    box-shadow 140ms ease;
+}
+.filter-trigger:hover {
+  border-color: #b4c7bd;
+}
+.filter-trigger:focus-visible,
+.filter-trigger[aria-expanded="true"] {
+  outline: none;
+  border-color: var(--teal);
+  box-shadow: 0 0 0 3px #19485014;
+}
+.filter-chevron {
+  color: #6c837b;
+  transition: transform 140ms ease;
+}
+.filter-trigger[aria-expanded="true"] .filter-chevron {
+  transform: rotate(180deg);
+}
+.filter-menu {
+  position: fixed;
+  z-index: 1100;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: white;
+  box-shadow:
+    0 12px 32px #10363c1c,
+    0 2px 6px #10363c0a;
+  animation: filter-reveal 120ms ease-out;
+}
+.filter-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  min-height: 40px;
+  padding: 9px 11px;
+  border-radius: 7px;
+  font-size: 12px;
+  color: var(--ink);
+  cursor: pointer;
+  user-select: none;
+}
+.filter-option.highlighted {
+  background: #f1f5ef;
+}
+.filter-option.is-selected {
+  color: var(--teal);
+  font-weight: 600;
+  background: #eaf2e6;
+}
+@keyframes filter-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 .table-scroll {
   overflow-x: auto;
@@ -1448,15 +1522,40 @@ td small {
   font-size: 12px;
   color: var(--ink);
   margin-bottom: 22px;
+  outline: none;
+  transition:
+    border-color 140ms ease,
+    box-shadow 140ms ease;
+}
+.login-form input:focus {
+  border-color: var(--teal);
+  box-shadow: 0 0 0 3px #19485014;
 }
 .login-form input::placeholder {
   color: #8c988c;
 }
 .password-field {
   position: relative;
+  border: 1px solid #dce3d8;
+  border-radius: 7px;
+  background: white;
+  margin-bottom: 22px;
+  transition:
+    border-color 140ms ease,
+    box-shadow 140ms ease;
+}
+.password-field:focus-within {
+  border-color: var(--teal);
+  box-shadow: 0 0 0 3px #19485014;
 }
 .password-field > input {
+  border: 0;
+  min-height: 45px;
+  margin-bottom: 0;
   padding-right: 47px;
+}
+.password-field > input:focus {
+  box-shadow: none;
 }
 .password-field > .icon-button {
   position: absolute;
@@ -1863,9 +1962,9 @@ td small {
     font-size: 10px;
     padding: 9px 11px;
   }
-  .toolbar-actions select {
+  .filter-trigger {
     font-size: 10px;
-    max-width: 150px;
+    min-width: 142px;
   }
   .services-grid {
     grid-template-columns: 1fr;

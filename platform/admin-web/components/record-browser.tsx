@@ -13,6 +13,7 @@ import { Status } from "./brand";
 import { Dialog } from "./dialog";
 import { Empty } from "./overview";
 import { Icon } from "./icon";
+import { FilterSelect } from "./filter-select";
 
 type ListSection = "Providers" | "Customers" | "Bookings" | "Activity";
 type Rows = {
@@ -278,23 +279,27 @@ export function RecordBrowser({
             />
           </label>
           <div className="toolbar-actions">
-            <select
-              aria-label="Filter status"
+            <FilterSelect
+              label={section === "Activity" ? "Filter action" : "Filter status"}
               value={filter}
-              onChange={(event) => {
-                setFilter(event.target.value);
+              onChange={(value) => {
+                setFilter(value);
                 setPage(0);
               }}
-            >
-              <option value="all">
-                {section === "Activity" ? "All actions" : "All statuses"}
-              </option>
-              {statuses.map((status) => (
-                <option key={status} value={status}>
-                  {displayStatus(status)}
-                </option>
-              ))}
-            </select>
+              options={[
+                {
+                  value: "all",
+                  label:
+                    section === "Activity" ? "All actions" : "All statuses",
+                },
+                ...statuses.map((status) => ({
+                  value: status,
+                  label: displayStatus(status).replace(/^\w/, (letter) =>
+                    letter.toUpperCase(),
+                  ),
+                })),
+              ]}
+            />
             <button
               className="button"
               disabled={busy || !!error || !list.length}

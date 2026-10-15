@@ -27,6 +27,8 @@ Use Node.js 22 or 24. Run `npm ci`, copy `.env.example` to `.env.local`, fill in
 - Database pagination and search across providers, customers, bookings, and activity
 - Provider/customer profile dialogs, booking details, and administrator activity details
 - Current-page CSV exports with quoted values and spreadsheet formula protection
+- Shared custom filter menus with selected checkmarks, keyboard navigation, type-ahead, Escape/outside dismissal, and viewport-aware positioning
+- Aligned field-level focus borders for search, email, and password controls
 - Booking status distribution and active service catalog summaries using actual records
 
 Record lists use 20-row database pages with exact counts. Name/phone search is available for accounts; booking search covers reference, address, and problem description; activity search covers action names. Filters apply across records, rather than just the current page. CSV exports contain only the current page. Overview totals are exact; the booking pipeline is explicitly limited to the latest 100 bookings. Refresh reloads from Supabase; returning to the browser window also refreshes. Realtime subscriptions are future work.
