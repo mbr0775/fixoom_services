@@ -9,3 +9,7 @@
 - Do not create or switch to another Supabase project unless the user explicitly changes this requirement. Shared migrations/tests belong in `platform/database`; these extend the existing project baseline.
 - Never commit real keys/passwords or include service-role credentials in a client. The public project URL is safe in configuration examples.
 - Build both apps after changes to shared modules. See `docs/CONNECTED_WORKFLOW.md` for setup, verification and release limitations.
+
+## Production requirement — no demo behavior
+
+The user reaffirmed on 2026-10-15 that Customer, Provider and Admin are for real production use. No user-facing demo mode, fictional providers/reviews/ratings/bookings/receipts/statistics, simulated writes, authentication bypass or in-memory replacement for backend persistence is permitted. Use real shared Supabase data and real device/user actions; show honest empty/error states when data or operations are unavailable. Isolated test fixtures belong only in test tooling and must never be rendered as operational data or seeded into the production database. Report unfinished integrations and release prerequisites accurately; do not claim production readiness before verification.
