@@ -60,6 +60,9 @@ fun NavGraph(
         composable(Screen.Explore.route) {
             ExploreScreen(
                 onServiceClick = { navController.navigate(Screen.ProviderList.createRoute(it)) },
+                onProviderClick = {
+                    navController.navigate(Screen.ProviderDetails.createRoute(it))
+                },
                 categories = state.data.categories,
                 professionals = state.data.professionals,
                 loading = state.loading,

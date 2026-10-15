@@ -38,9 +38,7 @@ import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Explore
 import androidx.compose.material.icons.rounded.KeyboardArrowRight
-import androidx.compose.material.icons.rounded.LocationOn
 import androidx.compose.material.icons.rounded.Search
-import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -66,7 +64,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
@@ -79,6 +76,8 @@ import androidx.compose.ui.unit.dp
 import com.fixoom.customer.R
 import com.fixoom.core.model.ServiceCategory
 import com.fixoom.core.model.ServiceProfessional
+import com.fixoom.marketplace.ui.ProfessionalSummary
+import com.fixoom.marketplace.ui.InfoCard
 import com.fixoom.customer.ui.theme.FixoomLavender
 import com.fixoom.customer.ui.theme.FixoomMint
 import com.fixoom.customer.ui.theme.FixoomPeach
@@ -100,7 +99,7 @@ private data class ExploreService(
     val iconRes: Int,
     val accent: Color,
     val filter: ExploreFilter,
-    val professionalCount: Int
+    val professionalCount: Int = 0
 )
 
 private val exploreServices = listOf(
@@ -109,48 +108,42 @@ private val exploreServices = listOf(
         description = "Leaks, pipes and bathroom fittings",
         iconRes = R.drawable.ic_service_plumbing,
         accent = FixoomSky,
-        filter = ExploreFilter.REPAIRS,
-        professionalCount = 24
+        filter = ExploreFilter.REPAIRS
     ),
     ExploreService(
         title = "Electrical",
         description = "Wiring, lighting and fault inspection",
         iconRes = R.drawable.ic_service_electrical,
         accent = FixoomPeach,
-        filter = ExploreFilter.REPAIRS,
-        professionalCount = 18
+        filter = ExploreFilter.REPAIRS
     ),
     ExploreService(
         title = "Carpentry",
         description = "Furniture, doors and custom woodwork",
         iconRes = R.drawable.ic_service_carpentry,
         accent = FixoomMint,
-        filter = ExploreFilter.REPAIRS,
-        professionalCount = 15
+        filter = ExploreFilter.REPAIRS
     ),
     ExploreService(
         title = "Painting",
         description = "Interior, exterior and decorative finishes",
         iconRes = R.drawable.ic_service_painting,
         accent = FixoomLavender,
-        filter = ExploreFilter.FINISHING,
-        professionalCount = 21
+        filter = ExploreFilter.FINISHING
     ),
     ExploreService(
         title = "Masonry",
         description = "Brickwork, plastering and concrete repairs",
         iconRes = R.drawable.ic_service_masonry,
         accent = Color(0xFFFFE8A3),
-        filter = ExploreFilter.FINISHING,
-        professionalCount = 12
+        filter = ExploreFilter.FINISHING
     ),
     ExploreService(
         title = "Welding",
         description = "Gates, grills and metal fabrication",
         iconRes = R.drawable.ic_service_welding,
         accent = Color(0xFFD7E1E8),
-        filter = ExploreFilter.FABRICATION,
-        professionalCount = 10
+        filter = ExploreFilter.FABRICATION
     )
 )
 
@@ -159,6 +152,7 @@ fun ExploreScreen(
     onServiceClick: (String) -> Unit,
     categories: List<ServiceCategory> = emptyList(),
     professionals: List<ServiceProfessional> = emptyList(),
+    onProviderClick: (String) -> Unit = {},
     loading: Boolean = false,
     dataError: String? = null,
     onRefresh: () -> Unit = {}
@@ -274,24 +268,38 @@ fun ExploreScreen(
                     )
                 }
 
-                if (visibleServices.isNotEmpty()) {
-                    item(key = "recommended_title") {
-                        ExploreSectionTitle(
-                            title = "Recommended near you",
-                            subtitle = "Top-rated professionals " +
-                                    "based on your area",
-                            modifier = Modifier.padding(
-                                horizontal = 20.dp
-                            )
-                        )
+                item(key = "available_professionals") {
+                    val visibleCategories = categories.filter { category ->
+                        visibleServices.any { it.title == category.name }
                     }
-
-                    item(key = "recommended_professionals") {
-                        RecommendedProfessionals(
-                            onProfessionalClick = { provider ->
-                                onServiceClick(provider.category)
-                            }
+                    val available = professionals.filter { provider ->
+                        visibleCategories.any { it.slug == provider.categorySlug }
+                    }
+                    Column(
+                        Modifier.padding(horizontal = 20.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        ExploreSectionTitle(
+                            title = "Available professionals",
+                            subtitle = "Approved providers accepting service requests",
                         )
+                        if (!loading && dataError == null && available.isEmpty()) {
+                            InfoCard(
+                                "No available professionals",
+                                "Approved providers will appear here when they are available for your selected services.",
+                            )
+                        }
+                        available.take(4).forEach { provider ->
+                            ProfessionalSummary(
+                                provider,
+                                categories
+                                    .find { it.slug == provider.categorySlug }
+                                    ?.name
+                                    .orEmpty(),
+                            ) {
+                                onProviderClick(provider.id)
+                            }
+                        }
                     }
                 }
 
@@ -817,197 +825,6 @@ private fun ExploreServiceCard(
 }
 
 @Composable
-private fun RecommendedProfessionals(
-    onProfessionalClick: (FixoomProvider) -> Unit
-) {
-    val recommended = remember {
-        fixoomProviders
-            .sortedWith(
-                compareByDescending<FixoomProvider> {
-                    it.rating
-                }.thenBy {
-                    it.distanceKm
-                }
-            )
-            .take(4)
-    }
-
-    LazyRow(
-        contentPadding = PaddingValues(horizontal = 20.dp),
-        horizontalArrangement = Arrangement.spacedBy(13.dp)
-    ) {
-        items(
-            items = recommended,
-            key = { provider ->
-                provider.id
-            }
-        ) { provider ->
-            RecommendedProfessionalCard(
-                provider = provider,
-                onClick = {
-                    onProfessionalClick(provider)
-                }
-            )
-        }
-    }
-}
-
-@Composable
-private fun RecommendedProfessionalCard(
-    provider: FixoomProvider,
-    onClick: () -> Unit
-) {
-    val shape = RoundedCornerShape(23.dp)
-
-    Card(
-        modifier = Modifier
-            .width(236.dp)
-            .clip(shape)
-            .clickable(onClick = onClick),
-        shape = shape,
-        colors = CardDefaults.cardColors(
-            containerColor =
-                MaterialTheme.colorScheme.surface
-        ),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = 0.dp
-        ),
-        border = BorderStroke(
-            width = 1.dp,
-            color = MaterialTheme
-                .colorScheme
-                .outline
-                .copy(alpha = 0.22f)
-        )
-    ) {
-        Column {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(124.dp)
-            ) {
-                Image(
-                    painter = painterResource(
-                        provider.imageRes
-                    ),
-                    contentDescription = null,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
-
-                Surface(
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .padding(10.dp),
-                    shape = RoundedCornerShape(50),
-                    color = if (provider.available) {
-                        MaterialTheme.colorScheme.secondary
-                    } else {
-                        MaterialTheme
-                            .colorScheme
-                            .surface
-                            .copy(alpha = 0.92f)
-                    }
-                ) {
-                    Text(
-                        text = if (provider.available) {
-                            "Available"
-                        } else {
-                            "Book later"
-                        },
-                        modifier = Modifier.padding(
-                            horizontal = 8.dp,
-                            vertical = 5.dp
-                        ),
-                        style = MaterialTheme
-                            .typography
-                            .labelSmall,
-                        color = if (provider.available) {
-                            MaterialTheme
-                                .colorScheme
-                                .onSecondary
-                        } else {
-                            MaterialTheme
-                                .colorScheme
-                                .onSurface
-                        },
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
-
-            Column(
-                modifier = Modifier.padding(14.dp)
-            ) {
-                Text(
-                    text = provider.name,
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-
-                Text(
-                    text = provider.category,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme
-                        .colorScheme
-                        .onSurfaceVariant
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Star,
-                        contentDescription = null,
-                        modifier = Modifier.size(17.dp),
-                        tint = Color(0xFFF4B400)
-                    )
-
-                    Spacer(modifier = Modifier.width(4.dp))
-
-                    Text(
-                        text = provider.rating.toString(),
-                        style = MaterialTheme
-                            .typography
-                            .labelMedium,
-                        color = MaterialTheme
-                            .colorScheme
-                            .onSurface,
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    Spacer(modifier = Modifier.width(10.dp))
-
-                    Icon(
-                        imageVector = Icons.Rounded.LocationOn,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp),
-                        tint = MaterialTheme
-                            .colorScheme
-                            .tertiary
-                    )
-
-                    Text(
-                        text = "${provider.distanceKm} km",
-                        style = MaterialTheme
-                            .typography
-                            .labelSmall,
-                        color = MaterialTheme
-                            .colorScheme
-                            .onSurfaceVariant
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
 private fun EmptyExploreResults(
     searchText: String,
     onClearClick: () -> Unit
@@ -1104,9 +921,8 @@ private fun ExploreInformationCard() {
             Spacer(modifier = Modifier.width(11.dp))
 
             Text(
-                text = "Compare ratings, distance, availability " +
-                        "and starting estimates before sending a " +
-                        "booking request.",
+                text = "Read provider profiles and service areas before requesting a service. " +
+                        "Discuss the scope and price with the provider before work begins.",
                 modifier = Modifier.weight(1f),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme

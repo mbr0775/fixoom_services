@@ -2,6 +2,7 @@ package com.fixoom.core.data.repository
 
 import com.fixoom.core.data.remote.FixoomSupabase
 import com.fixoom.core.model.*
+import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.postgrest
@@ -21,13 +22,11 @@ data class MarketplaceSnapshot(
     val bookings: List<ServiceBooking> = emptyList(),
 )
 
-class MarketplaceRepository {
-    private val client
-        get() = FixoomSupabase.client
+class MarketplaceRepository(private val client: SupabaseClient = FixoomSupabase.client) {
 
     suspend fun snapshot(): MarketplaceSnapshot = coroutineScope {
         client.auth.awaitInitialization()
-        val profile = async { AuthRepository().getCurrentProfile() }
+        val profile = async { AuthRepository(client).getCurrentProfile() }
         val categories = async {
             client
                 .from("service_categories")
@@ -73,12 +72,15 @@ class MarketplaceRepository {
                     }
                     .decodeList<ServiceBooking>()
             else emptyList()
-        val enabled = categories.await()
+        val enabled = categories.await().filter { it.isActive }
         MarketplaceSnapshot(
             identity,
             enabled,
             professionals.await().filter { p ->
-                enabled.any { it.slug == p.categorySlug } && p.serviceArea.isNotBlank()
+                p.isAvailable &&
+                    p.displayName.isNotBlank() &&
+                    p.serviceArea.isNotBlank() &&
+                    enabled.any { it.slug == p.categorySlug }
             },
             own,
             bookings,

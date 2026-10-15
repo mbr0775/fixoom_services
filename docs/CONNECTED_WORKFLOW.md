@@ -64,3 +64,7 @@ The connected development workflow is verified. Public release still requires pu
 Vercel hosting has not been verified: the connector cannot access the previously specified team, and searching the currently accessible projects for Fixoom returns none. No production admin URL is claimed. Connect an authorized Vercel team/project to `mbr0775/fixoom_admin` to publish it with the configured environment variables.
 
 The Supabase security advisor has no schema/RLS warnings for this delivery. Leaked-password protection is disabled; review [Supabase password protection](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection) before public release.
+
+### Real provider discovery
+
+Home, Explore and provider booking routes read the same Supabase directory. Explore cards open the actual provider ID, with no invented ratings, distance or example professionals. The provider must be approved, available, and have a display name, active category and service area. If none qualify, customers see an empty state. Do not create a demo provider to fill it. SMS/WhatsApp phone verification is deferred; entering a contact number alone does not verify ownership.

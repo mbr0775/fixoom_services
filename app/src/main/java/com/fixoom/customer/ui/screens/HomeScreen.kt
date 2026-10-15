@@ -12,7 +12,6 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
@@ -21,12 +20,9 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -44,7 +40,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
@@ -93,9 +88,7 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -173,16 +166,6 @@ private val homeHeroBanners = listOf(
     )
 )
 
-private data class FeaturedProfessional(
-    val name: String,
-    val service: String,
-    val rating: String,
-    val reviewCount: Int,
-    val distance: String,
-    val availableNow: Boolean,
-    val imageRes: Int
-)
-
 private val homeServices = listOf(
     ServiceCategoryUi(
         title = "Plumbing",
@@ -219,36 +202,6 @@ private val homeServices = listOf(
         description = "Gates and metal fabrication",
         iconRes = R.drawable.ic_service_welding,
         accent = Color(0xFFD7E1E8)
-    )
-)
-
-private val featuredProfessionals = listOf(
-    FeaturedProfessional(
-        name = "Apex Plumbing",
-        service = "Plumbing",
-        rating = "4.9",
-        reviewCount = 124,
-        distance = "1.2 km",
-        availableNow = true,
-        imageRes = R.drawable.service_plumbing
-    ),
-    FeaturedProfessional(
-        name = "BrightFix Electrical",
-        service = "Electrical",
-        rating = "4.8",
-        reviewCount = 118,
-        distance = "2.0 km",
-        availableNow = true,
-        imageRes = R.drawable.service_electrical
-    ),
-    FeaturedProfessional(
-        name = "Prime Painting",
-        service = "Painting",
-        rating = "4.8",
-        reviewCount = 107,
-        distance = "1.8 km",
-        availableNow = false,
-        imageRes = R.drawable.service_painting
     )
 )
 
@@ -346,7 +299,7 @@ fun HomeScreen(
                 item(key = "featured_professionals") {
                     Column(Modifier.padding(horizontal=20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
                         Text("Available professionals",style=MaterialTheme.typography.titleLarge)
-                        if(professionals.isEmpty()) InfoCard("Your service network","Approved professionals appear here when they are available for requests.")
+                        if(!loading && dataError == null && professionals.isEmpty()) InfoCard("Your service network","Approved professionals appear here when they are available for requests.")
                         professionals.take(4).forEach { professional -> ProfessionalSummary(professional,categories.find { it.slug==professional.categorySlug }?.name.orEmpty()){onProviderClick(professional.id)} }
                     }
                 }
@@ -1999,425 +1952,6 @@ private fun TrustDivider() {
 }
 
 @Composable
-private fun FeaturedProfessionalsSection(
-    onProfessionalClick: (FeaturedProfessional) -> Unit
-) {
-    Column(
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp),
-            verticalAlignment = Alignment.Bottom
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "NEARBY EXPERTS",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.ExtraBold
-                )
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Text(
-                    text = "Top professionals near you",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    fontWeight = FontWeight.Black
-                )
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Text(
-                    text = "Verified, highly rated and ready to help",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
-            Surface(
-                shape = RoundedCornerShape(50),
-                color = MaterialTheme.colorScheme.secondaryContainer
-            ) {
-                Row(
-                    modifier = Modifier.padding(
-                        horizontal = 11.dp,
-                        vertical = 8.dp
-                    ),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Swipe",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme
-                            .onSecondaryContainer,
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    Spacer(modifier = Modifier.width(4.dp))
-
-                    Icon(
-                        imageVector =
-                            Icons.AutoMirrored.Rounded.ArrowForward,
-                        contentDescription = null,
-                        modifier = Modifier.size(17.dp),
-                        tint = MaterialTheme.colorScheme.onSecondaryContainer
-                    )
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(18.dp))
-
-        LazyRow(
-            contentPadding = PaddingValues(horizontal = 20.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            items(
-                items = featuredProfessionals,
-                key = { professional ->
-                    professional.name
-                }
-            ) { professional ->
-                ProfessionalCard(
-                    professional = professional,
-                    onClick = {
-                        onProfessionalClick(professional)
-                    }
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun ProfessionalCard(
-    professional: FeaturedProfessional,
-    onClick: () -> Unit
-) {
-    val colorScheme = MaterialTheme.colorScheme
-    val isDarkMode = colorScheme.background.luminance() < 0.5f
-    val interactionSource = remember {
-        MutableInteractionSource()
-    }
-
-    val isPressed by interactionSource.collectIsPressedAsState()
-
-    val cardScale by animateFloatAsState(
-        targetValue = if (isPressed) 0.965f else 1f,
-        animationSpec = tween(140),
-        label = "professionalCardScale"
-    )
-
-    val cardShape = RoundedCornerShape(30.dp)
-
-    Card(
-        modifier = Modifier
-            .width(292.dp)
-            .graphicsLayer {
-                scaleX = cardScale
-                scaleY = cardScale
-            }
-            .clip(cardShape)
-            .clickable(
-                interactionSource = interactionSource,
-                indication = null,
-                onClick = onClick
-            )
-            .semantics(mergeDescendants = true) {
-                contentDescription =
-                    "${professional.name}, ${professional.service}, " +
-                            "rated ${professional.rating}"
-            },
-        shape = cardShape,
-        colors = CardDefaults.cardColors(
-            containerColor = colorScheme.surface
-        ),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = if (isDarkMode) 0.dp else 5.dp
-        ),
-        border = BorderStroke(
-            width = 1.dp,
-            color = colorScheme.outline.copy(alpha = 0.20f)
-        )
-    ) {
-        Column {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(178.dp)
-            ) {
-                Image(
-                    painter = painterResource(professional.imageRes),
-                    contentDescription = null,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
-
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(
-                            Brush.verticalGradient(
-                                colors = listOf(
-                                    Color.Transparent,
-                                    Color.Black.copy(alpha = 0.08f),
-                                    FixoomTealDark.copy(alpha = 0.82f)
-                                )
-                            )
-                        )
-                )
-
-                Surface(
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .padding(13.dp),
-                    shape = RoundedCornerShape(50),
-                    color = if (professional.availableNow) {
-                        FixoomLime
-                    } else {
-                        Color.Black.copy(alpha = 0.58f)
-                    }
-                ) {
-                    Row(
-                        modifier = Modifier.padding(
-                            horizontal = 10.dp,
-                            vertical = 7.dp
-                        ),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(7.dp)
-                                .background(
-                                    color = if (professional.availableNow) {
-                                        FixoomTealDark
-                                    } else {
-                                        FixoomLime
-                                    },
-                                    shape = CircleShape
-                                )
-                        )
-
-                        Spacer(modifier = Modifier.width(6.dp))
-
-                        Text(
-                            text = if (professional.availableNow) {
-                                "AVAILABLE NOW"
-                            } else {
-                                "TOP RATED"
-                            },
-                            style = MaterialTheme.typography.labelSmall,
-                            color = if (professional.availableNow) {
-                                FixoomTealDark
-                            } else {
-                                Color.White
-                            },
-                            fontWeight = FontWeight.ExtraBold
-                        )
-                    }
-                }
-
-                Surface(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(13.dp),
-                    shape = RoundedCornerShape(50),
-                    color = Color.Black.copy(alpha = 0.60f)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(
-                            horizontal = 9.dp,
-                            vertical = 5.dp
-                        ),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.LocationOn,
-                            contentDescription = null,
-                            modifier = Modifier.size(14.dp),
-                            tint = Color.White
-                        )
-
-                        Spacer(modifier = Modifier.width(3.dp))
-
-                        Text(
-                            text = professional.distance,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = Color.White
-                        )
-                    }
-                }
-
-                Surface(
-                    modifier = Modifier
-                        .align(Alignment.BottomStart)
-                        .padding(13.dp),
-                    shape = RoundedCornerShape(50),
-                    color = Color.White.copy(alpha = 0.16f),
-                    border = BorderStroke(
-                        width = 1.dp,
-                        color = Color.White.copy(alpha = 0.22f)
-                    )
-                ) {
-                    Text(
-                        text = professional.service,
-                        modifier = Modifier.padding(
-                            horizontal = 11.dp,
-                            vertical = 6.dp
-                        ),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
-
-            Column(
-                modifier = Modifier.padding(17.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = professional.name,
-                        modifier = Modifier.weight(1f),
-                        style = MaterialTheme.typography.titleLarge,
-                        color = colorScheme.onSurface,
-                        fontWeight = FontWeight.ExtraBold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-
-                    Spacer(modifier = Modifier.width(8.dp))
-
-                    Surface(
-                        modifier = Modifier.size(28.dp),
-                        shape = CircleShape,
-                        color = colorScheme.secondaryContainer
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                imageVector = Icons.Rounded.CheckCircle,
-                                contentDescription = "Fixoom verified",
-                                modifier = Modifier.size(17.dp),
-                                tint = colorScheme.onSecondaryContainer
-                            )
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(5.dp))
-
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Rounded.Shield,
-                        contentDescription = null,
-                        modifier = Modifier.size(15.dp),
-                        tint = colorScheme.primary
-                    )
-
-                    Spacer(modifier = Modifier.width(5.dp))
-
-                    Text(
-                        text = "Fixoom verified ${professional.service.lowercase()} professional",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(13.dp))
-
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(18.dp),
-                    color = colorScheme.surfaceVariant.copy(alpha = 0.72f)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(
-                            horizontal = 12.dp,
-                            vertical = 11.dp
-                        ),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Star,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp),
-                            tint = Color(0xFFF4B400)
-                        )
-
-                        Spacer(modifier = Modifier.width(5.dp))
-
-                        Text(
-                            text = professional.rating,
-                            style = MaterialTheme.typography.labelLarge,
-                            color = colorScheme.onSurface,
-                            fontWeight = FontWeight.ExtraBold
-                        )
-
-                        Text(
-                            text = " • ${professional.reviewCount} reviews",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = colorScheme.onSurfaceVariant
-                        )
-
-                        Spacer(modifier = Modifier.weight(1f))
-
-                        Surface(
-                            modifier = Modifier.size(32.dp),
-                            shape = CircleShape,
-                            color = colorScheme.primary
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Rounded.ArrowForward,
-                                    contentDescription = "View ${professional.name}",
-                                    modifier = Modifier.size(18.dp),
-                                    tint = colorScheme.onPrimary
-                                )
-                            }
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(11.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "View professional",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = colorScheme.primary,
-                        fontWeight = FontWeight.ExtraBold
-                    )
-
-                    Spacer(modifier = Modifier.weight(1f))
-
-                    Text(
-                        text = if (professional.availableNow) {
-                            "Ready to book"
-                        } else {
-                            "View availability"
-                        },
-                        style = MaterialTheme.typography.labelSmall,
-                        color = colorScheme.onSurfaceVariant,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
 private fun HowFixoomWorks() {
     val colorScheme = MaterialTheme.colorScheme
     val isDarkMode = colorScheme.background.luminance() < 0.5f
@@ -2533,7 +2067,7 @@ private fun HowFixoomWorks() {
                         iconContainerColor = FixoomLavender,
                         title = "Compare trusted pros",
                         description =
-                            "Check ratings, availability, distance and experience."
+                            "Read provider introductions, service areas and availability."
                     )
 
                     BookingStepConnector(
