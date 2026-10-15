@@ -350,7 +350,7 @@ fun ConnectedAccount(vm: MarketplaceViewModel, onBack: () -> Unit) {
                             phone,
                             { phone = it },
                             Modifier.fillMaxWidth(),
-                            label = { Text("Phone, e.g. +94771234567 (optional)") },
+                            label = { Text("Phone, e.g. 0771234567 (optional)") },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                             singleLine = true,
                             enabled = !state.saving,
@@ -392,8 +392,8 @@ fun ConnectedAccount(vm: MarketplaceViewModel, onBack: () -> Unit) {
                                     register && name.trim().length < 2 -> "Enter your full name."
                                     register &&
                                         phone.isNotBlank() &&
-                                        !phone.matches(Regex("\\+[1-9][0-9]{7,14}")) ->
-                                        "Enter a phone number with country code."
+                                        ContactPhone.normalize(phone) == null ->
+                                        "Enter a valid local or international phone number."
                                     else -> null
                                 }
                             if (validation == null)
@@ -439,7 +439,7 @@ fun ConnectedAccount(vm: MarketplaceViewModel, onBack: () -> Unit) {
                             phone,
                             { phone = it },
                             Modifier.fillMaxWidth(),
-                            label = { Text("Phone with country code") },
+                            label = { Text("Local or international phone number") },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                             singleLine = true,
                         )
@@ -447,8 +447,7 @@ fun ConnectedAccount(vm: MarketplaceViewModel, onBack: () -> Unit) {
                             {
                                 if (
                                     name.trim().length >= 2 &&
-                                        (phone.isBlank() ||
-                                            phone.matches(Regex("\\+[1-9][0-9]{7,14}")))
+                                        (phone.isBlank() || ContactPhone.normalize(phone) != null)
                                 )
                                     vm.runAction { saveAccount(name, phone) }
                                 else validation = "Check your name and phone number."

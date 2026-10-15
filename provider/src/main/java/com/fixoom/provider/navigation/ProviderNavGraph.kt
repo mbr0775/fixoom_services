@@ -80,6 +80,10 @@ fun ProviderNavGraph(
                 navController.navigateAndClear(ProviderScreen.Welcome.route)
             }
 
+            AuthResult.ReturnToSignIn -> {
+                navController.navigateAndClear(ProviderScreen.Login.route)
+            }
+
             AuthResult.EmailVerificationRequired -> {
                 navController.navigateAndClear(ProviderScreen.EmailVerification.route)
             }

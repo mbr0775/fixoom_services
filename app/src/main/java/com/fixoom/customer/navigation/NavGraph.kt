@@ -1,6 +1,7 @@
 package com.fixoom.customer.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -22,6 +23,7 @@ fun NavGraph(
     modifier: Modifier = Modifier,
     isDarkMode: Boolean = false,
     onDarkModeChange: (Boolean) -> Unit = {},
+    authReturn: Int = 0,
 ) {
     val market: MarketplaceViewModel = viewModel()
     val state by market.state.collectAsStateWithLifecycle()
@@ -31,6 +33,15 @@ fun NavGraph(
     }
     val openAccount: () -> Unit = { navController.navigate("account") }
     val back: () -> Unit = { navController.popBackStack() }
+    LaunchedEffect(authReturn) {
+        if (authReturn > 0) {
+            market.refresh()
+            navController.navigate("account") {
+                popUpTo(Screen.Home.route)
+                launchSingleTop = true
+            }
+        }
+    }
     NavHost(navController, Screen.Home.route, modifier) {
         composable(Screen.Home.route) {
             HomeScreen(

@@ -60,3 +60,11 @@ Historical admin snapshots on `codex/fixoom-admin-platform` are not the active a
 Registration clears an older local auth session before requesting the new account and resolves a profile only for the resulting matching identity. Confirmation-only responses open email verification. Sign-in also recognizes an unconfirmed email; a missing private profile clears the unusable session and presents recovery instructions instead of the SDK's “List is empty” error. SDK/server exception details are not displayed directly.
 
 Eight isolated HTTP regression tests cover confirmation-only registration, stale sessions, confirmed provider registration, missing profiles, unconfirmed sign-in, failed registration and wrong-role denial. Run them with `:core:testDebugUnitTest`. They use only test HTTP responses and never create production accounts. No database schema or approval rules were changed by this fix.
+
+## Contact, approval and email return update
+
+Local Sri Lankan contacts such as `0771234567` are now normalized to E.164 in the shared client and database. The applied contact migration repairs the original phone constraint and fills missing contacts from the original signup metadata without overwriting saved profile contacts. Accounts with different emails may share a contact number.
+
+Provider approval checks show progress, a clear still-pending result, or a retryable error. Approval opens the workspace; the button never approves its own account. Confirmation links now explicitly target `fixoom-provider://auth/confirmed` or `fixoom-customer://auth/confirmed`, and both apps return to their sign-in screen. Add those exact URLs plus the existing recovery URL `fixoom-provider://auth` to the same Supabase project's Auth redirect allowlist. The user confirmed this setup on October 15, 2026. Older links that still land on the admin origin use its app handoff page; mobile sessions are never imported into the admin.
+
+Verification includes 12 repository auth tests, 2 contact normalization tests, 3 provider approval ViewModel tests, four transactional SQL suites and browser callback/role checks. Phone routing is checked by opening the registered confirmation URI; this does not substitute for inbox delivery verification or send email on behalf of a user. Admin refresh is now manual, with real Auth email shown through protected profile contacts.

@@ -187,13 +187,15 @@ class MarketplaceRepository {
     }
 
     suspend fun saveAccount(name: String, phone: String) {
+        val normalizedPhone = ContactPhone.normalize(phone)
+        require(phone.isBlank() || normalizedPhone != null) { "Enter a valid phone number." }
         val id = client.auth.currentUserOrNull()?.id ?: error("Sign in required")
         client
             .from("profiles")
             .update(
                 buildJsonObject {
                     put("full_name", name.trim())
-                    put("phone", if (phone.isBlank()) JsonNull else JsonPrimitive(phone.trim()))
+                    put("phone", normalizedPhone?.let(::JsonPrimitive) ?: JsonNull)
                 }
             ) {
                 filter { eq("id", id) }

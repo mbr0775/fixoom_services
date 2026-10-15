@@ -10,6 +10,8 @@ sealed interface AuthResult {
 
     data object EmailVerificationRequired : AuthResult
 
+    data object ReturnToSignIn : AuthResult
+
     data object PasswordResetEmailSent : AuthResult
 
     data object PasswordUpdated : AuthResult

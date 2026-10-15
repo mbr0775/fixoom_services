@@ -10,7 +10,9 @@ class FixoomCustomerApplication : Application() {
 
         FixoomSupabase.initialize(
             supabaseUrl = BuildConfig.SUPABASE_URL,
-            supabaseAnonKey = BuildConfig.SUPABASE_ANON_KEY
+            supabaseAnonKey = BuildConfig.SUPABASE_ANON_KEY,
+            authScheme = "fixoom-customer",
+            authHost = "auth"
         )
     }
 }

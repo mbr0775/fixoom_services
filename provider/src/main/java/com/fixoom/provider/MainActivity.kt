@@ -76,6 +76,15 @@ class MainActivity : ComponentActivity() {
         if (uri.scheme != PROVIDER_AUTH_SCHEME || uri.host != PROVIDER_AUTH_HOST) {
             return
         }
+        setIntent(Intent(intent).setData(null))
+
+        val isEmailConfirmation = uri.path == "/confirmed"
+        if (isEmailConfirmation && uri.fragment?.contains("access_token=") != true) {
+            // Older emails can arrive through the web handoff without a session.
+            // Login still verifies the credentials and confirmation on the server.
+            authViewModel.returnToSignIn()
+            return
+        }
 
         val isPasswordRecovery =
             uri.getQueryParameter("type") == "recovery" ||
@@ -89,6 +98,8 @@ class MainActivity : ComponentActivity() {
                 runOnUiThread {
                     if (isPasswordRecovery) {
                         passwordRecoveryLinkOpened = true
+                    } else if (isEmailConfirmation) {
+                        authViewModel.returnToSignIn()
                     } else {
                         authViewModel.restoreSession()
                     }

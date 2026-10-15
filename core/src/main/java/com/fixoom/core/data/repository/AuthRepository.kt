@@ -4,6 +4,7 @@ import com.fixoom.core.data.remote.FixoomSupabase
 import com.fixoom.core.model.AccountStatus
 import com.fixoom.core.model.AppRole
 import com.fixoom.core.model.AuthResult
+import com.fixoom.core.model.ContactPhone
 import com.fixoom.core.model.Profile
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.auth
@@ -26,7 +27,11 @@ class AuthRepository(private val client: SupabaseClient = FixoomSupabase.client)
     ): AuthResult {
         val cleanName = fullName.trim()
         val cleanEmail = email.trim().lowercase()
-        val cleanPhone = phone.trim()
+        val cleanPhone = ContactPhone.normalize(phone)
+        if (phone.isNotBlank() && cleanPhone == null)
+            return AuthResult.Error(
+                "Enter a valid phone number, such as 0771234567 or +94771234567."
+            )
 
         validateRegistration(
                 fullName = cleanName,
@@ -45,7 +50,12 @@ class AuthRepository(private val client: SupabaseClient = FixoomSupabase.client)
             // Never resolve the new account through a stale, unrelated identity.
             client.auth.clearSession()
             val registeredUser =
-                client.auth.signUpWith(Email) {
+                client.auth.signUpWith(
+                    Email,
+                    redirectUrl =
+                        if (role == AppRole.PROVIDER) "fixoom-provider://auth/confirmed"
+                        else "fixoom-customer://auth/confirmed",
+                ) {
                     this.email = cleanEmail
                     this.password = password
 
@@ -53,7 +63,7 @@ class AuthRepository(private val client: SupabaseClient = FixoomSupabase.client)
                         put("full_name", cleanName)
                         put("role", role.databaseValue())
 
-                        if (cleanPhone.isNotBlank()) {
+                        if (cleanPhone != null) {
                             put("phone", cleanPhone)
                         }
                     }
@@ -249,6 +259,13 @@ class AuthRepository(private val client: SupabaseClient = FixoomSupabase.client)
                     )
             )
         }
+    }
+
+    /** Confirmation links return to login; they do not bypass an explicit sign-in. */
+    suspend fun returnToSignIn(): AuthResult {
+        client.auth.awaitInitialization()
+        client.auth.clearSession()
+        return AuthResult.ReturnToSignIn
     }
 
     private suspend fun resolveAccountAccess(

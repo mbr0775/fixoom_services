@@ -16,8 +16,10 @@ import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.content.OutgoingContent
 import io.ktor.http.headersOf
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.json.*
 import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
@@ -27,6 +29,52 @@ import org.junit.rules.Timeout
 @OptIn(kotlin.time.ExperimentalTime::class)
 class AuthRepositoryTest {
     @get:Rule val timeout: Timeout = Timeout.seconds(15)
+
+    @Test
+    fun profileReadsSupportSyncedEmailContact() = runBlocking {
+        fixture().useClient { client, _ ->
+            AuthRepository(client).signIn(EMAIL, PASSWORD, AppRole.PROVIDER)
+            assertEquals(EMAIL, AuthRepository(client).getCurrentProfile()?.email)
+        }
+    }
+
+    @Test
+    fun providerSignupPreservesLocalPhoneAndUsesProviderConfirmationLink() = runBlocking {
+        fixture(signupRedirect = "fixoom-provider://auth/confirmed", signupPhone = "+94771234567")
+            .useClient { client, _ ->
+                assertEquals(
+                    AuthResult.EmailVerificationRequired,
+                    AuthRepository(client)
+                        .register(
+                            "Fixture Professional",
+                            EMAIL,
+                            "0771234567",
+                            PASSWORD,
+                            AppRole.PROVIDER,
+                        ),
+                )
+            }
+    }
+
+    @Test
+    fun customerSignupUsesCustomerConfirmationLink() = runBlocking {
+        fixture(signupRedirect = "fixoom-customer://auth/confirmed").useClient { client, _ ->
+            assertEquals(
+                AuthResult.EmailVerificationRequired,
+                AuthRepository(client)
+                    .register("Fixture Customer", EMAIL, "", PASSWORD, AppRole.CUSTOMER),
+            )
+        }
+    }
+
+    @Test
+    fun confirmationReturnRequiresExplicitSignIn() = runBlocking {
+        fixture().useClient { client, _ ->
+            client.auth.importSession(oldSession(), autoRefresh = false)
+            assertEquals(AuthResult.ReturnToSignIn, AuthRepository(client).returnToSignIn())
+            assertNull(client.auth.currentSessionOrNull())
+        }
+    }
 
     @Test
     fun unconfirmedSignupDoesNotReadPrivateProfile() = runBlocking {
@@ -126,6 +174,8 @@ class AuthRepositoryTest {
         signInError: String? = null,
         signupError: Boolean = false,
         profileRole: String = "provider",
+        signupRedirect: String? = null,
+        signupPhone: String? = null,
     ): Fixture {
         val requests = mutableListOf<String>()
         val user =
@@ -135,6 +185,21 @@ class AuthRepositoryTest {
         val engine = MockEngine { request ->
             val path = request.url.encodedPath
             requests.add(path)
+            if (path == "/auth/v1/signup") {
+                signupRedirect?.let { assertEquals(it, request.url.parameters["redirect_to"]) }
+                signupPhone?.let {
+                    val body =
+                        (request.body as OutgoingContent.ByteArrayContent).bytes().decodeToString()
+                    assertEquals(
+                        it,
+                        Json.parseToJsonElement(body)
+                            .jsonObject["data"]!!
+                            .jsonObject["phone"]!!
+                            .jsonPrimitive
+                            .content,
+                    )
+                }
+            }
             var status = HttpStatusCode.OK
             val response =
                 when (path) {
@@ -157,7 +222,7 @@ class AuthRepositoryTest {
                     "/rest/v1/profiles" ->
                         if (emptyProfile) "[]"
                         else
-                            """[{"id":"$USER_ID","role":"$profileRole","account_status":"pending","full_name":"Fixture Professional"}]"""
+                            """[{"id":"$USER_ID","role":"$profileRole","account_status":"pending","full_name":"Fixture Professional","email":"$EMAIL"}]"""
                     "/auth/v1/logout" -> "{}"
                     else -> error("Unexpected test request: $path")
                 }

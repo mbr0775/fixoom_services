@@ -15,7 +15,7 @@ The customer Android app, provider Android app and Next.js admin panel now use t
 
 Newly registered providers require administrator approval. No demo provider or test booking remains in the live database after verification, so an empty directory is expected until an approved provider enables availability.
 
-Screens refresh every 12 seconds while visible; manual refresh is also available. This does not deliver background push notifications. The phone and browser need internet access. Display times use Asia/Colombo. Latest mobile snapshots cover up to 200 bookings, 100 messages per conversation and 500 directory entries; receipt totals explicitly cover that loaded booking range.
+Mobile screens refresh every 12 seconds while visible; manual refresh is also available. Admin data reloads on explicit refresh, navigation/search/filter/page changes or successful administrator actions, with no interval or window-focus reload. This does not deliver background push notifications. The phone and browser need internet access. Display times use Asia/Colombo. Latest mobile snapshots cover up to 200 bookings, 100 messages per conversation and 500 directory entries; receipt totals explicitly cover that loaded booking range.
 
 ## What was connected
 

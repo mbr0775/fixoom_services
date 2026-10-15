@@ -5,26 +5,76 @@ import androidx.lifecycle.viewModelScope
 import com.fixoom.core.data.repository.AuthRepository
 import com.fixoom.core.model.AppRole
 import com.fixoom.core.model.AuthResult
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeout
 
 data class ProviderAuthUiState(
     val isLoading: Boolean = true,
-    val result: AuthResult? = null
+    val result: AuthResult? = null,
 )
 
-class ProviderAuthViewModel(
-    private val authRepository: AuthRepository =
-        AuthRepository()
-) : ViewModel() {
+data class ApprovalStatusState(
+    val checking: Boolean = false,
+    val message: String? = null,
+    val error: String? = null,
+)
 
-    private val _uiState =
-        MutableStateFlow(ProviderAuthUiState())
+class ProviderAuthViewModel(private val authRepository: AuthRepository = AuthRepository()) :
+    ViewModel() {
 
-    val uiState: StateFlow<ProviderAuthUiState> =
-        _uiState.asStateFlow()
+    private val _uiState = MutableStateFlow(ProviderAuthUiState())
+
+    val uiState: StateFlow<ProviderAuthUiState> = _uiState.asStateFlow()
+
+    private val _approvalStatus = MutableStateFlow(ApprovalStatusState())
+    val approvalStatus = _approvalStatus.asStateFlow()
+    private var approvalJob: Job? = null
+    private var authJob: Job? = null
+
+    fun checkApprovalStatus() {
+        if (_approvalStatus.value.checking) return
+        _approvalStatus.value = ApprovalStatusState(checking = true)
+        approvalJob = viewModelScope.launch {
+            try {
+                when (
+                    val result =
+                        withTimeout(20_000) {
+                            authRepository.restoreSession(AppRole.PROVIDER)
+                        }
+                ) {
+                    AuthResult.ProviderApprovalPending ->
+                        _approvalStatus.value =
+                            ApprovalStatusState(
+                                message =
+                                    "Status checked: your application is still awaiting administrator approval."
+                            )
+                    is AuthResult.Error ->
+                        _approvalStatus.value = ApprovalStatusState(error = result.message)
+                    else -> {
+                        _approvalStatus.value = ApprovalStatusState()
+                        _uiState.value = ProviderAuthUiState(isLoading = false, result = result)
+                    }
+                }
+            } catch (cancelled: CancellationException) {
+                if (cancelled !is TimeoutCancellationException) throw cancelled
+                _approvalStatus.value =
+                    ApprovalStatusState(
+                        error = "Status check timed out. Check your connection and try again."
+                    )
+            } catch (_: Exception) {
+                _approvalStatus.value =
+                    ApprovalStatusState(
+                        error = "Could not check approval. Check your connection and try again."
+                    )
+            }
+        }
+    }
 
     init {
         restoreSession()
@@ -32,21 +82,19 @@ class ProviderAuthViewModel(
 
     fun restoreSession() {
         executeAuthRequest {
-            authRepository.restoreSession(
-                requiredRole = AppRole.PROVIDER
-            )
+            authRepository.restoreSession(requiredRole = AppRole.PROVIDER)
         }
     }
 
     fun signIn(
         email: String,
-        password: String
+        password: String,
     ) {
         executeAuthRequest {
             authRepository.signIn(
                 email = email,
                 password = password,
-                requiredRole = AppRole.PROVIDER
+                requiredRole = AppRole.PROVIDER,
             )
         }
     }
@@ -55,7 +103,7 @@ class ProviderAuthViewModel(
         fullName: String,
         email: String,
         phone: String,
-        password: String
+        password: String,
     ) {
         executeAuthRequest {
             authRepository.register(
@@ -63,28 +111,23 @@ class ProviderAuthViewModel(
                 email = email,
                 phone = phone,
                 password = password,
-                role = AppRole.PROVIDER
+                role = AppRole.PROVIDER,
             )
         }
     }
 
-    fun requestPasswordReset(
-        email: String
-    ) {
+    fun requestPasswordReset(email: String) {
         executeAuthRequest {
             authRepository.requestPasswordReset(
                 email = email,
-                redirectUrl = PROVIDER_AUTH_REDIRECT
+                redirectUrl = PROVIDER_AUTH_REDIRECT,
             )
         }
     }
 
-    fun updatePassword(
-        newPassword: String
-    ) {
+    fun updatePassword(newPassword: String) {
         executeAuthRequest {
-            val result =
-                authRepository.updatePassword(newPassword)
+            val result = authRepository.updatePassword(newPassword)
 
             if (result is AuthResult.PasswordUpdated) {
                 authRepository.signOut()
@@ -101,33 +144,44 @@ class ProviderAuthViewModel(
         }
     }
 
-    fun clearResult() {
-        _uiState.value =
-            _uiState.value.copy(result = null)
+    fun returnToSignIn() {
+        executeAuthRequest { authRepository.returnToSignIn() }
     }
 
-    private fun executeAuthRequest(
-        request: suspend () -> AuthResult
-    ) {
-        viewModelScope.launch {
+    fun clearResult() {
+        _uiState.value = _uiState.value.copy(result = null)
+    }
+
+    private fun executeAuthRequest(request: suspend () -> AuthResult) {
+        approvalJob?.cancel()
+        _approvalStatus.value = ApprovalStatusState()
+        authJob?.cancel()
+        authJob = viewModelScope.launch {
             _uiState.value =
                 ProviderAuthUiState(
                     isLoading = true,
-                    result = null
+                    result = null,
                 )
 
-            val result = request()
+            val result =
+                try {
+                    withTimeout(20_000) { request() }
+                } catch (cancelled: CancellationException) {
+                    if (cancelled !is TimeoutCancellationException) throw cancelled
+                    AuthResult.Error("Connection timed out. Please try again.")
+                } catch (_: Exception) {
+                    AuthResult.Error("Unable to connect. Please try again.")
+                }
 
             _uiState.value =
                 ProviderAuthUiState(
                     isLoading = false,
-                    result = result
+                    result = result,
                 )
         }
     }
 
     private companion object {
-        const val PROVIDER_AUTH_REDIRECT =
-            "fixoom-provider://auth"
+        const val PROVIDER_AUTH_REDIRECT = "fixoom-provider://auth"
     }
 }

@@ -17,6 +17,7 @@ import com.fixoom.provider.ui.screens.dashboard.ProviderDashboardScreen
 fun ProviderWorkspaceScreen(auth: ProviderAuthViewModel, pending: Boolean = false) {
     val market: MarketplaceViewModel = viewModel()
     val state by market.state.collectAsStateWithLifecycle()
+    val approval by auth.approvalStatus.collectAsStateWithLifecycle()
     var section by rememberSaveable { mutableStateOf(if (pending) "profile" else "home") }
     var selectedBooking by rememberSaveable { mutableStateOf<String?>(null) }
     ObserveMarketplace(market)
@@ -50,7 +51,16 @@ fun ProviderWorkspaceScreen(auth: ProviderAuthViewModel, pending: Boolean = fals
                     onBack = { selectedBooking = null },
                 )
             pending || section == "profile" ->
-                ConnectedProviderProfile(market, pending, home, auth::restoreSession, auth::signOut)
+                ConnectedProviderProfile(
+                    market,
+                    pending,
+                    home,
+                    auth::checkApprovalStatus,
+                    auth::signOut,
+                    checkingApproval = approval.checking,
+                    approvalMessage = approval.message,
+                    approvalError = approval.error,
+                )
             section == "receipts" -> ConnectedReceipts(market, { selectedBooking = it }, home)
             section != "home" ->
                 ConnectedBookings(

@@ -1,6 +1,6 @@
 # Fixoom connected database
 
-These migrations extend the existing Supabase project `mzkrxovluljvsqzbowwb` and its pre-existing `profiles`, `app_role`, `account_status` and profile timestamp trigger. They are **not an initial schema for an empty project**. All four migrations in this directory have been applied to the existing live project. Do not apply them again manually to that project.
+These migrations extend the existing Supabase project `mzkrxovluljvsqzbowwb` and its pre-existing `profiles`, `app_role`, `account_status` and profile timestamp trigger. They are **not an initial schema for an empty project**. All six migrations in this directory have been applied to the existing live project. Do not apply them again manually to that project.
 
 The versioned source is `platform/database` on `main` in [fixoom_services](https://github.com/mbr0775/fixoom_services). The local workspace's `Fixoom_Platform/database` is the working source used for this delivery; keep both copies synchronized when making future migrations. The admin repository is separate.
 
@@ -10,6 +10,8 @@ The versioned source is `platform/database` on `main` in [fixoom_services](https
 2. Platform foundation: pending provider registration, service catalog, approved directory, admin review/audit and booking ownership/status rules.
 3. Connected workflow: editable professional profiles, idempotent booking requests, identity snapshots, participant-only conversations, event history, final LKR amounts and recorded direct payments.
 4. Customer moderation: administrator-only suspend/restore with audit history.
+5. Contact phone normalization: accept Sri Lankan local and international formats, store E.164, fix the leading-plus constraint, and recover missing profile contacts from original signup metadata. Contact numbers can be shared between email accounts; email/session identity and role checks remain unchanged.
+6. Profile email contacts: mirror authoritative Auth email into the private profile on registration and email changes, including existing accounts. Own-account/admin RLS protects this contact field; clients cannot overwrite it directly, and the public provider directory does not expose it.
 
 Android and web clients use a public key plus the signed-in user's session. Server-side role, account-state and ownership checks authorize operations; RLS protects participant data. Booking events/messages cannot be inserted directly by clients. Admins can inspect a conversation but cannot send messages impersonating its participants.
 
@@ -18,6 +20,10 @@ Payment is directly between customer and provider. `confirm_direct_payment` reco
 ## Verification
 
 Run `tests/platform_access.sql` and `tests/connected_workflow.sql` as a database administrator. Both create synthetic identities inside a transaction and roll back all fixtures. They do not send email or leave test accounts behind.
+
+`tests/contact_phone.sql` additionally checks local/international normalization, signup persistence, shared contacts and authenticated edit validation. Its fixtures also roll back. All three suites passed after the contact repair.
+
+`tests/profile_email.sql` verifies email synchronization, administrator visibility, own-account access, anonymous denial and rejection of direct client email edits. All four SQL suites use rollback-only fixtures.
 
 The original test verifies registration, protection against self-assigned admin roles, administrator review, ownership isolation, booking lifecycle and anonymous access. The connected test adds pending profile setup, availability, idempotency, final amount and receipt handling, participant chat, event history, customer moderation and restricted-account isolation. Both passed against the configured project on October 15, 2026.
 

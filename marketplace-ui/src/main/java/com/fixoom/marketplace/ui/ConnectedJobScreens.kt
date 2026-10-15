@@ -361,6 +361,9 @@ fun ConnectedProviderProfile(
     onBack: () -> Unit,
     onCheckApproval: () -> Unit,
     onSignOut: () -> Unit,
+    checkingApproval: Boolean = false,
+    approvalMessage: String? = null,
+    approvalError: String? = null,
 ) {
     val state by vm.state.collectAsStateWithLifecycle()
     val service = state.data.ownService
@@ -378,7 +381,17 @@ fun ConnectedProviderProfile(
                     "Awaiting administrator approval",
                     "Complete your service profile so the Fixoom administrator can review it. After approval, turn on availability to receive customer requests.",
                 ) {
-                    Button(onCheckApproval) { Text("Check approval status") }
+                    Button(onCheckApproval, enabled = !checkingApproval && !state.saving) {
+                        if (checkingApproval) {
+                            CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                            Spacer(Modifier.width(8.dp))
+                        }
+                        Text(
+                            if (checkingApproval) "Checking approval…" else "Check approval status"
+                        )
+                    }
+                    approvalMessage?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
+                    approvalError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                 }
             }
         item {
