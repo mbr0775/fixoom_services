@@ -54,3 +54,9 @@ The provider's existing native 3D/parallax visual treatment is preserved; see `p
 - Active admin: [mbr0775/fixoom_admin](https://github.com/mbr0775/fixoom_admin), branch `main`.
 
 Historical admin snapshots on `codex/fixoom-admin-platform` are not the active admin application.
+
+## Sign-up reliability update — October 15, 2026
+
+Registration clears an older local auth session before requesting the new account and resolves a profile only for the resulting matching identity. Confirmation-only responses open email verification. Sign-in also recognizes an unconfirmed email; a missing private profile clears the unusable session and presents recovery instructions instead of the SDK's “List is empty” error. SDK/server exception details are not displayed directly.
+
+Eight isolated HTTP regression tests cover confirmation-only registration, stale sessions, confirmed provider registration, missing profiles, unconfirmed sign-in, failed registration and wrong-role denial. Run them with `:core:testDebugUnitTest`. They use only test HTTP responses and never create production accounts. No database schema or approval rules were changed by this fix.

@@ -128,6 +128,7 @@ dependencies {
     testImplementation(
         libs.junit
     )
+    testImplementation("io.ktor:ktor-client-mock:${libs.versions.ktor.get()}")
 
     androidTestImplementation(
         libs.androidx.junit

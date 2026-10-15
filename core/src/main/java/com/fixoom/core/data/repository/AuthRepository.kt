@@ -7,70 +7,82 @@ import com.fixoom.core.model.AuthResult
 import com.fixoom.core.model.Profile
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.auth.exception.AuthErrorCode
+import io.github.jan.supabase.auth.exception.AuthRestException
 import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.postgrest.from
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
-class AuthRepository(
-    private val client: SupabaseClient = FixoomSupabase.client
-) {
+class AuthRepository(private val client: SupabaseClient = FixoomSupabase.client) {
 
     suspend fun register(
         fullName: String,
         email: String,
         phone: String,
         password: String,
-        role: AppRole
+        role: AppRole,
     ): AuthResult {
         val cleanName = fullName.trim()
         val cleanEmail = email.trim().lowercase()
         val cleanPhone = phone.trim()
 
         validateRegistration(
-            fullName = cleanName,
-            email = cleanEmail,
-            password = password,
-            role = role
-        )?.let { error ->
-            return AuthResult.Error(error)
-        }
+                fullName = cleanName,
+                email = cleanEmail,
+                password = password,
+                role = role,
+            )
+            ?.let { error ->
+                return AuthResult.Error(error)
+            }
 
         return try {
             client.auth.awaitInitialization()
 
-            client.auth.signUpWith(Email) {
-                this.email = cleanEmail
-                this.password = password
+            // A confirmation-only signup does not replace an existing SDK session.
+            // Never resolve the new account through a stale, unrelated identity.
+            client.auth.clearSession()
+            val registeredUser =
+                client.auth.signUpWith(Email) {
+                    this.email = cleanEmail
+                    this.password = password
 
-                data = buildJsonObject {
-                    put("full_name", cleanName)
-                    put("role", role.databaseValue())
+                    data = buildJsonObject {
+                        put("full_name", cleanName)
+                        put("role", role.databaseValue())
 
-                    if (cleanPhone.isNotBlank()) {
-                        put("phone", cleanPhone)
+                        if (cleanPhone.isNotBlank()) {
+                            put("phone", cleanPhone)
+                        }
                     }
                 }
-            }
 
-            val currentUser =
-                client.auth.currentUserOrNull()
+            val currentUser = client.auth.currentUserOrNull()
 
-            if (currentUser == null) {
+            if (
+                currentUser == null ||
+                    !currentUser.email.equals(cleanEmail, ignoreCase = true) ||
+                    (registeredUser != null && registeredUser.id != currentUser.id)
+            ) {
+                client.auth.clearSession()
                 AuthResult.EmailVerificationRequired
             } else {
                 resolveAccountAccess(
                     userId = currentUser.id,
-                    requiredRole = role
+                    requiredRole = role,
                 )
             }
         } catch (exception: CancellationException) {
             throw exception
         } catch (exception: Exception) {
             AuthResult.Error(
-                message = exception.message
-                    ?: "Registration failed. Please try again."
+                message =
+                    authErrorMessage(
+                        exception,
+                        "Registration could not be completed. Check your connection and try again. If you already registered, verify your email and sign in.",
+                    )
             )
         }
     }
@@ -78,20 +90,16 @@ class AuthRepository(
     suspend fun signIn(
         email: String,
         password: String,
-        requiredRole: AppRole
+        requiredRole: AppRole,
     ): AuthResult {
         val cleanEmail = email.trim().lowercase()
 
         if (cleanEmail.isBlank()) {
-            return AuthResult.Error(
-                "Email address is required."
-            )
+            return AuthResult.Error("Email address is required.")
         }
 
         if (password.isBlank()) {
-            return AuthResult.Error(
-                "Password is required."
-            )
+            return AuthResult.Error("Password is required.")
         }
 
         return try {
@@ -104,68 +112,66 @@ class AuthRepository(
 
             val currentUser =
                 client.auth.currentUserOrNull()
-                    ?: return AuthResult.Error(
-                        "Unable to load the authenticated user."
-                    )
+                    ?: return AuthResult.Error("Unable to load the authenticated user.")
 
             resolveAccountAccess(
                 userId = currentUser.id,
-                requiredRole = requiredRole
+                requiredRole = requiredRole,
             )
         } catch (exception: CancellationException) {
             throw exception
         } catch (exception: Exception) {
-            AuthResult.Error(
-                message = exception.message
-                    ?: "Sign in failed. Check your credentials."
+            if (
+                exception is AuthRestException &&
+                    exception.errorCode == AuthErrorCode.EmailNotConfirmed
             )
+                AuthResult.EmailVerificationRequired
+            else
+                AuthResult.Error(
+                    authErrorMessage(
+                        exception,
+                        "Sign in failed. Check your email, password and connection, then try again.",
+                    )
+                )
         }
     }
 
-    suspend fun restoreSession(
-        requiredRole: AppRole
-    ): AuthResult {
+    suspend fun restoreSession(requiredRole: AppRole): AuthResult {
         return try {
             client.auth.awaitInitialization()
 
-            val currentUser =
-                client.auth.currentUserOrNull()
-                    ?: return AuthResult.SignedOut
+            val currentUser = client.auth.currentUserOrNull() ?: return AuthResult.SignedOut
 
             resolveAccountAccess(
                 userId = currentUser.id,
-                requiredRole = requiredRole
+                requiredRole = requiredRole,
             )
         } catch (exception: CancellationException) {
             throw exception
         } catch (exception: Exception) {
             AuthResult.Error(
-                message = exception.message
-                    ?: "Unable to restore your session."
+                message =
+                    authErrorMessage(
+                        exception,
+                        "Unable to restore your session. Check your connection and sign in again.",
+                    )
             )
         }
     }
 
     suspend fun requestPasswordReset(
         email: String,
-        redirectUrl: String
+        redirectUrl: String,
     ): AuthResult {
         val cleanEmail = email.trim().lowercase()
         val cleanRedirectUrl = redirectUrl.trim()
 
-        if (
-            cleanEmail.isBlank() ||
-            !cleanEmail.contains("@")
-        ) {
-            return AuthResult.Error(
-                "Please enter a valid email address."
-            )
+        if (cleanEmail.isBlank() || !cleanEmail.contains("@")) {
+            return AuthResult.Error("Please enter a valid email address.")
         }
 
         if (cleanRedirectUrl.isBlank()) {
-            return AuthResult.Error(
-                "Password recovery address is missing."
-            )
+            return AuthResult.Error("Password recovery address is missing.")
         }
 
         return try {
@@ -173,7 +179,7 @@ class AuthRepository(
 
             client.auth.resetPasswordForEmail(
                 email = cleanEmail,
-                redirectUrl = cleanRedirectUrl
+                redirectUrl = cleanRedirectUrl,
             )
 
             AuthResult.PasswordResetEmailSent
@@ -181,28 +187,25 @@ class AuthRepository(
             throw exception
         } catch (exception: Exception) {
             AuthResult.Error(
-                message = exception.message
-                    ?: "Unable to send the password reset email."
+                message =
+                    authErrorMessage(
+                        exception,
+                        "Unable to send the password reset email. Check your connection and try again.",
+                    )
             )
         }
     }
 
-    suspend fun updatePassword(
-        newPassword: String
-    ): AuthResult {
+    suspend fun updatePassword(newPassword: String): AuthResult {
         if (newPassword.length < 8) {
-            return AuthResult.Error(
-                "Password must contain at least 8 characters."
-            )
+            return AuthResult.Error("Password must contain at least 8 characters.")
         }
 
         return try {
             client.auth.awaitInitialization()
 
             if (client.auth.currentSessionOrNull() == null) {
-                return AuthResult.Error(
-                    "Your password recovery session has expired."
-                )
+                return AuthResult.Error("Your password recovery session has expired.")
             }
 
             client.auth.updateUser {
@@ -214,8 +217,11 @@ class AuthRepository(
             throw exception
         } catch (exception: Exception) {
             AuthResult.Error(
-                message = exception.message
-                    ?: "Unable to update your password."
+                message =
+                    authErrorMessage(
+                        exception,
+                        "Unable to update your password. Check your connection or request a new recovery link.",
+                    )
             )
         }
     }
@@ -223,9 +229,7 @@ class AuthRepository(
     suspend fun getCurrentProfile(): Profile? {
         client.auth.awaitInitialization()
 
-        val userId =
-            client.auth.currentUserOrNull()?.id
-                ?: return null
+        val userId = client.auth.currentUserOrNull()?.id ?: return null
 
         return loadProfile(userId)
     }
@@ -238,24 +242,34 @@ class AuthRepository(
             throw exception
         } catch (exception: Exception) {
             AuthResult.Error(
-                message = exception.message
-                    ?: "Sign out failed. Please try again."
+                message =
+                    authErrorMessage(
+                        exception,
+                        "Sign out failed. Check your connection and try again.",
+                    )
             )
         }
     }
 
     private suspend fun resolveAccountAccess(
         userId: String,
-        requiredRole: AppRole
+        requiredRole: AppRole,
     ): AuthResult {
-        val profile = loadProfile(userId)
+        val profile =
+            loadProfile(userId)
+                ?: run {
+                    client.auth.clearSession()
+                    return AuthResult.Error(
+                        "Your account profile is unavailable. Please sign in again. If this continues, contact fixoomservices@gmail.com."
+                    )
+                }
 
         if (profile.role != requiredRole) {
             clearCurrentSession()
 
             return AuthResult.WrongApplication(
                 requiredRole = requiredRole,
-                actualRole = profile.role
+                actualRole = profile.role,
             )
         }
 
@@ -268,7 +282,8 @@ class AuthRepository(
                 AuthResult.ProviderApprovalPending
             }
 
-            AccountStatus.SUSPENDED, AccountStatus.DELETED -> {
+            AccountStatus.SUSPENDED,
+            AccountStatus.DELETED -> {
                 clearCurrentSession()
                 AuthResult.AccountSuspended
             }
@@ -280,9 +295,7 @@ class AuthRepository(
         }
     }
 
-    private suspend fun loadProfile(
-        userId: String
-    ): Profile {
+    private suspend fun loadProfile(userId: String): Profile? {
         return client
             .from("profiles")
             .select {
@@ -290,7 +303,28 @@ class AuthRepository(
                     eq("id", userId)
                 }
             }
-            .decodeSingle()
+            .decodeList<Profile>()
+            .singleOrNull()
+    }
+
+    private fun authErrorMessage(exception: Exception, fallback: String): String {
+        // SDK exception text can contain internal responses and request details.
+        return when ((exception as? AuthRestException)?.errorCode) {
+            AuthErrorCode.InvalidCredentials ->
+                "The email or password is incorrect. Please try again."
+            AuthErrorCode.EmailNotConfirmed ->
+                "Verify your email before signing in. Check your inbox and spam folder."
+            AuthErrorCode.EmailExists,
+            AuthErrorCode.UserAlreadyExists ->
+                "Use Sign in if you already registered, or choose a different email address."
+            AuthErrorCode.WeakPassword -> "Choose a stronger password with at least 8 characters."
+            AuthErrorCode.OverRequestRateLimit,
+            AuthErrorCode.OverEmailSendRateLimit ->
+                "Too many requests. Please wait a few minutes before trying again."
+            AuthErrorCode.SignupDisabled ->
+                "New registrations are currently unavailable. Contact fixoomservices@gmail.com."
+            else -> fallback
+        }
     }
 
     private suspend fun clearCurrentSession() {
@@ -307,7 +341,7 @@ class AuthRepository(
         fullName: String,
         email: String,
         password: String,
-        role: AppRole
+        role: AppRole,
     ): String? {
         if (role == AppRole.ADMIN) {
             return "Admin accounts cannot be created from a mobile app."
@@ -317,11 +351,7 @@ class AuthRepository(
             return "Please enter your full name."
         }
 
-        if (
-            email.isBlank() ||
-            !email.contains("@") ||
-            !email.substringAfter("@").contains(".")
-        ) {
+        if (email.isBlank() || !email.contains("@") || !email.substringAfter("@").contains(".")) {
             return "Please enter a valid email address."
         }
 

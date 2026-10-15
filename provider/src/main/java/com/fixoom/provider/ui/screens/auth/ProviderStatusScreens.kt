@@ -50,7 +50,7 @@ fun ProviderEmailVerificationScreen(
         iconColor = MaterialTheme.colorScheme.primary,
         title = "Check your email",
         description =
-            "We sent a verification link to your email address. Verify your email before signing in.",
+            "Verify your email to finish setting up your account. Check the confirmation email from Fixoom before signing in.",
         information = listOf(
             "Open the email sent by Fixoom.",
             "Tap the verification link.",
