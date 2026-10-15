@@ -24,11 +24,11 @@ Open this repository root in Android Studio, use its bundled JDK and install the
 
 ```properties
 sdk.dir=YOUR_ANDROID_SDK_PATH
-SUPABASE_URL=YOUR_SUPABASE_PROJECT_URL
+SUPABASE_URL=https://mzkrxovluljvsqzbowwb.supabase.co
 SUPABASE_ANON_KEY=YOUR_PUBLIC_CLIENT_KEY
 ```
 
-Use the same Supabase project as the admin panel. Never embed a service-role key or signing credentials. The migrations extend the existing Fixoom project and are not a complete bootstrap for an empty database; read `platform/database/README.md` first.
+Customer, Provider and Admin must always use this same Supabase project (`mzkrxovluljvsqzbowwb`), including the admin's Vercel environment. Use its public client key. Never embed a service-role key or signing credentials. The migrations extend the existing Fixoom project and are not a complete bootstrap for an empty database; read `platform/database/README.md` first.
 
 ## Build and install
 
