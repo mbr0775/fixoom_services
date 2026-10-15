@@ -90,6 +90,7 @@ kotlin {
 }
 
 dependencies {
+    api("androidx.lifecycle:lifecycle-viewmodel-ktx:2.10.0")
     // Shared Android utilities
     implementation(
         libs.androidx.core.ktx

@@ -77,6 +77,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.fixoom.customer.R
+import com.fixoom.core.model.ServiceCategory
+import com.fixoom.core.model.ServiceProfessional
 import com.fixoom.customer.ui.theme.FixoomLavender
 import com.fixoom.customer.ui.theme.FixoomMint
 import com.fixoom.customer.ui.theme.FixoomPeach
@@ -154,7 +156,12 @@ private val exploreServices = listOf(
 
 @Composable
 fun ExploreScreen(
-    onServiceClick: (String) -> Unit
+    onServiceClick: (String) -> Unit,
+    categories: List<ServiceCategory> = emptyList(),
+    professionals: List<ServiceProfessional> = emptyList(),
+    loading: Boolean = false,
+    dataError: String? = null,
+    onRefresh: () -> Unit = {}
 ) {
     val focusManager = LocalFocusManager.current
 
@@ -176,9 +183,13 @@ fun ExploreScreen(
 
     val visibleServices = remember(
         searchText,
-        selectedFilter
+        selectedFilter, categories, professionals
     ) {
-        exploreServices.filter { service ->
+        categories.map { category ->
+            (exploreServices.firstOrNull { it.title.equals(category.name,true) }
+                ?: ExploreService(category.name,category.description,R.drawable.ic_service_cleaning,FixoomMint,ExploreFilter.REPAIRS,0))
+                .copy(description=category.description,professionalCount=professionals.count { it.categorySlug==category.slug })
+        }.filter { service ->
             val matchesFilter =
                 selectedFilter == ExploreFilter.ALL ||
                         service.filter == selectedFilter
@@ -249,6 +260,8 @@ fun ExploreScreen(
                 }
 
                 item(key = "service_results") {
+                    if(loading) androidx.compose.material3.LinearProgressIndicator(Modifier.fillMaxWidth().padding(horizontal=20.dp))
+                    dataError?.let { com.fixoom.marketplace.ui.InfoCard("Unable to refresh services",it,error=true){TextButton(onRefresh){Text("Try again")}} }
                     ExploreServiceResults(
                         services = visibleServices,
                         searchText = searchText,

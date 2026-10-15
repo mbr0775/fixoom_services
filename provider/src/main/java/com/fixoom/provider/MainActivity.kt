@@ -22,20 +22,14 @@ import io.github.jan.supabase.auth.handleDeeplinks
 
 class MainActivity : ComponentActivity() {
 
-    private lateinit var authViewModel:
-            ProviderAuthViewModel
+    private lateinit var authViewModel: ProviderAuthViewModel
 
-    private var passwordRecoveryLinkOpened by
-    mutableStateOf(false)
+    private var passwordRecoveryLinkOpened by mutableStateOf(false)
 
-    override fun onCreate(
-        savedInstanceState: Bundle?
-    ) {
+    override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        authViewModel = ViewModelProvider(this)[
-            ProviderAuthViewModel::class.java
-        ]
+        authViewModel = ViewModelProvider(this)[ProviderAuthViewModel::class.java]
 
         processAuthenticationLink(intent)
 
@@ -45,108 +39,49 @@ class MainActivity : ComponentActivity() {
             Fixoom_ServicesTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
+                    color = MaterialTheme.colorScheme.background,
                 ) {
                     ProviderNavGraph(
-                        passwordRecoveryLinkOpened =
-                            passwordRecoveryLinkOpened,
+                        passwordRecoveryLinkOpened = passwordRecoveryLinkOpened,
                         onPasswordRecoveryLinkConsumed = {
                             passwordRecoveryLinkOpened = false
-                        },
-
-                        // These values will come from the
-                        // provider_profiles table.
-                        availability = null,
-                        onAvailabilityChange = {
-                            showDevelopmentMessage(
-                                "Availability will be connected to the provider profile."
-                            )
-                        },
-
-                        onOpenJobRequests = {
-                            showDevelopmentMessage(
-                                "Job requests require the bookings database."
-                            )
-                        },
-                        onOpenActiveJobs = {
-                            showDevelopmentMessage(
-                                "Active jobs require the bookings database."
-                            )
-                        },
-                        onOpenSchedule = {
-                            showDevelopmentMessage(
-                                "Schedule requires provider availability."
-                            )
-                        },
-                        onOpenEarnings = {
-                            showDevelopmentMessage(
-                                "Earnings require completed-job payment records."
-                            )
-                        },
-                        onOpenProfile = {
-                            showDevelopmentMessage(
-                                "Provider profile setup is the next main feature."
-                            )
-                        },
-                        onOpenNotifications = {
-                            showDevelopmentMessage(
-                                "Notifications will be connected after bookings."
-                            )
                         },
 
                         // Real legal URLs will be connected
                         // before Play Store release.
                         onOpenTerms = {
-                            showDevelopmentMessage(
-                                "Provider Terms are not published yet."
-                            )
+                            showInformationMessage("Provider Terms are not published yet.")
                         },
                         onOpenPrivacyPolicy = {
-                            showDevelopmentMessage(
-                                "Privacy Policy is not published yet."
-                            )
+                            showInformationMessage("Privacy Policy is not published yet.")
                         },
-                        onContactSupport = {
-                            showDevelopmentMessage(
-                                "Fixoom support details are not configured yet."
-                            )
-                        },
-
-                        authViewModel = authViewModel
+                        onContactSupport = ::openSupport,
+                        authViewModel = authViewModel,
                     )
                 }
             }
         }
     }
 
-    override fun onNewIntent(
-        intent: Intent
-    ) {
+    override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
 
         setIntent(intent)
         processAuthenticationLink(intent)
     }
 
-    private fun processAuthenticationLink(
-        intent: Intent
-    ) {
+    private fun processAuthenticationLink(intent: Intent) {
         val uri = intent.data ?: return
 
-        if (
-            uri.scheme != PROVIDER_AUTH_SCHEME ||
-            uri.host != PROVIDER_AUTH_HOST
-        ) {
+        if (uri.scheme != PROVIDER_AUTH_SCHEME || uri.host != PROVIDER_AUTH_HOST) {
             return
         }
 
         val isPasswordRecovery =
             uri.getQueryParameter("type") == "recovery" ||
-                    uri.fragment
-                        ?.split("&")
-                        ?.any { value ->
-                            value == "type=recovery"
-                        } == true
+                uri.fragment?.split("&")?.any { value ->
+                    value == "type=recovery"
+                } == true
 
         FixoomSupabase.client.handleDeeplinks(
             intent = intent,
@@ -162,30 +97,41 @@ class MainActivity : ComponentActivity() {
             onError = {
                 runOnUiThread {
                     Toast.makeText(
-                        this,
-                        "Unable to process the authentication link.",
-                        Toast.LENGTH_LONG
-                    ).show()
+                            this,
+                            "Unable to process the authentication link.",
+                            Toast.LENGTH_LONG,
+                        )
+                        .show()
                 }
-            }
+            },
         )
     }
 
-    private fun showDevelopmentMessage(
-        message: String
-    ) {
+    private fun openSupport() {
+        try {
+            startActivity(
+                Intent(
+                    Intent.ACTION_SENDTO,
+                    android.net.Uri.parse("mailto:fixoomservices@gmail.com"),
+                )
+            )
+        } catch (_: android.content.ActivityNotFoundException) {
+            showInformationMessage("Contact Fixoom at fixoomservices@gmail.com.")
+        }
+    }
+
+    private fun showInformationMessage(message: String) {
         Toast.makeText(
-            this,
-            message,
-            Toast.LENGTH_SHORT
-        ).show()
+                this,
+                message,
+                Toast.LENGTH_SHORT,
+            )
+            .show()
     }
 
     private companion object {
-        const val PROVIDER_AUTH_SCHEME =
-            "fixoom-provider"
+        const val PROVIDER_AUTH_SCHEME = "fixoom-provider"
 
-        const val PROVIDER_AUTH_HOST =
-            "auth"
+        const val PROVIDER_AUTH_HOST = "auth"
     }
 }

@@ -1,295 +1,171 @@
 package com.fixoom.customer.navigation
 
-import android.net.Uri
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
-import com.fixoom.customer.data.BookingStore
-import com.fixoom.customer.ui.screens.AlertsScreen
-import com.fixoom.customer.ui.screens.BookingConfirmationScreen
-import com.fixoom.customer.ui.screens.BookingDetailsScreen
-import com.fixoom.customer.ui.screens.BookingsScreen
+import com.fixoom.core.data.repository.MarketplaceViewModel
 import com.fixoom.customer.ui.screens.ExploreScreen
 import com.fixoom.customer.ui.screens.HomeScreen
-import com.fixoom.customer.ui.screens.MessagesScreen
 import com.fixoom.customer.ui.screens.ProfileScreen
-import com.fixoom.customer.ui.screens.ProviderDetailsScreen
-import com.fixoom.customer.ui.screens.ProviderListScreen
-import com.fixoom.customer.ui.screens.ServiceBookingScreen
+import com.fixoom.marketplace.ui.*
 
 @Composable
 fun NavGraph(
     navController: NavHostController,
     modifier: Modifier = Modifier,
     isDarkMode: Boolean = false,
-    onDarkModeChange: (Boolean) -> Unit = {}
+    onDarkModeChange: (Boolean) -> Unit = {},
 ) {
-    NavHost(
-        navController = navController,
-        startDestination = Screen.Home.route,
-        modifier = modifier
-    ) {
-        // Home
-        composable(
-            route = Screen.Home.route
-        ) {
+    val market: MarketplaceViewModel = viewModel()
+    val state by market.state.collectAsStateWithLifecycle()
+    ObserveMarketplace(market)
+    val openBooking: (String) -> Unit = {
+        navController.navigate(Screen.BookingDetails.createRoute(it))
+    }
+    val openAccount: () -> Unit = { navController.navigate("account") }
+    val back: () -> Unit = { navController.popBackStack() }
+    NavHost(navController, Screen.Home.route, modifier) {
+        composable(Screen.Home.route) {
             HomeScreen(
-                onServiceClick = { category ->
-                    navController.navigate(
-                        Screen.ProviderList.createRoute(
-                            category
-                        )
-                    )
+                onServiceClick = { navController.navigate(Screen.ProviderList.createRoute(it)) },
+                onNotificationsClick = { navController.navigate(Screen.Alerts.route) },
+                categories = state.data.categories,
+                professionals = state.data.professionals,
+                onProviderClick = {
+                    navController.navigate(Screen.ProviderDetails.createRoute(it))
                 },
-                onNotificationsClick = {
-                    navController.navigate(Screen.Alerts.route)
-                }
+                loading = state.loading,
+                dataError = state.error,
+                onRefresh = market::refresh,
             )
         }
-
-        // Explore
-        composable(
-            route = Screen.Explore.route
-        ) {
+        composable(Screen.Explore.route) {
             ExploreScreen(
-                onServiceClick = { category ->
-                    navController.navigate(
-                        Screen.ProviderList.createRoute(
-                            category
-                        )
-                    )
-                }
+                onServiceClick = { navController.navigate(Screen.ProviderList.createRoute(it)) },
+                categories = state.data.categories,
+                professionals = state.data.professionals,
+                loading = state.loading,
+                dataError = state.error,
+                onRefresh = market::refresh,
             )
         }
-
-        // Bookings
-        composable(
-            route = Screen.Bookings.route
-        ) {
-            BookingsScreen(
-                navController = navController
+        composable(Screen.Bookings.route) {
+            ConnectedBookings(market, onOpen = openBooking, onAccount = openAccount)
+        }
+        composable(Screen.Messages.route) {
+            ConnectedBookings(
+                market,
+                mode = "messages",
+                onOpen = openBooking,
+                onAccount = openAccount,
             )
         }
-
-        // Alerts
-        composable(
-            route = Screen.Alerts.route
-        ) {
-            AlertsScreen()
+        composable(Screen.Alerts.route) {
+            ConnectedBookings(
+                market,
+                mode = "activity",
+                onOpen = openBooking,
+                onAccount = openAccount,
+                onBack = back,
+            )
         }
-
-        // Profile
-        composable(
-            route = Screen.Profile.route
-        ) {
+        composable("account") { ConnectedAccount(market, back) }
+        composable(Screen.Profile.route) {
             ProfileScreen(
-                isDarkMode = isDarkMode,
-                onDarkModeChange = onDarkModeChange,
-                onBookingsClick = {
+                isDarkMode,
+                onDarkModeChange,
+                { navController.navigate(Screen.Bookings.route) },
+                { navController.navigate(Screen.Explore.route) },
+                onManageAccount = openAccount,
+            )
+        }
+        composable(
+            Screen.ProviderList.route,
+            arguments =
+                listOf(navArgument(Screen.ProviderList.ARG_CATEGORY) { type = NavType.StringType }),
+        ) { entry ->
+            ConnectedProviderList(
+                entry.arguments?.getString(Screen.ProviderList.ARG_CATEGORY).orEmpty(),
+                market,
+                { navController.navigate(Screen.ProviderDetails.createRoute(it)) },
+                back,
+            )
+        }
+        composable(
+            Screen.ProviderDetails.route,
+            arguments =
+                listOf(
+                    navArgument(Screen.ProviderDetails.ARG_PROVIDER_ID) {
+                        type = NavType.StringType
+                    }
+                ),
+        ) { entry ->
+            ConnectedProviderDetails(
+                entry.arguments?.getString(Screen.ProviderDetails.ARG_PROVIDER_ID).orEmpty(),
+                market,
+                back,
+            ) {
+                navController.navigate(Screen.ServiceBooking.createRoute(it))
+            }
+        }
+        composable(
+            Screen.ServiceBooking.route,
+            arguments =
+                listOf(
+                    navArgument(Screen.ServiceBooking.ARG_PROVIDER_ID) { type = NavType.StringType }
+                ),
+        ) { entry ->
+            ConnectedBookingForm(
+                entry.arguments?.getString(Screen.ServiceBooking.ARG_PROVIDER_ID).orEmpty(),
+                market,
+                back,
+                openAccount,
+            ) { id ->
+                if (navController.currentDestination?.route == Screen.ServiceBooking.route)
+                    navController.navigate(Screen.BookingConfirmation.createRoute(id)) {
+                        popUpTo(Screen.ServiceBooking.route) { inclusive = true }
+                    }
+            }
+        }
+        composable(
+            Screen.BookingConfirmation.route,
+            arguments =
+                listOf(
+                    navArgument(Screen.BookingConfirmation.ARG_BOOKING_ID) {
+                        type = NavType.StringType
+                    }
+                ),
+        ) { entry ->
+            ConnectedBookingDetails(
+                entry.arguments?.getString(Screen.BookingConfirmation.ARG_BOOKING_ID).orEmpty(),
+                market,
+                onBack = {
                     navController.navigate(Screen.Bookings.route) {
-                        popUpTo(Screen.Home.route) { saveState = true }
-                        launchSingleTop = true
-                        restoreState = true
-                    }
-                },
-                onExploreClick = {
-                    navController.navigate(Screen.Explore.route) {
-                        popUpTo(Screen.Home.route) { saveState = true }
-                        launchSingleTop = true
-                        restoreState = true
-                    }
-                }
-            )
-        }
-
-        // Provider list
-        composable(
-            route = Screen.ProviderList.route,
-            arguments = listOf(
-                navArgument(
-                    Screen.ProviderList.ARG_CATEGORY
-                ) {
-                    type = NavType.StringType
-                }
-            )
-        ) { backStackEntry ->
-            val encodedCategory =
-                backStackEntry.arguments
-                    ?.getString(
-                        Screen.ProviderList.ARG_CATEGORY
-                    )
-                    .orEmpty()
-
-            val category =
-                Uri.decode(encodedCategory)
-
-            ProviderListScreen(
-                category = category,
-                onBackClick = {
-                    navController.popBackStack()
-                },
-                onProviderClick = { providerId ->
-                    navController.navigate(
-                        Screen.ProviderDetails.createRoute(
-                            providerId
-                        )
-                    )
-                }
-            )
-        }
-
-        // Provider details
-        composable(
-            route = Screen.ProviderDetails.route,
-            arguments = listOf(
-                navArgument(
-                    Screen.ProviderDetails.ARG_PROVIDER_ID
-                ) {
-                    type = NavType.IntType
-                }
-            )
-        ) { backStackEntry ->
-            val providerId =
-                backStackEntry.arguments
-                    ?.getInt(
-                        Screen.ProviderDetails.ARG_PROVIDER_ID
-                    )
-                    ?: 0
-
-            ProviderDetailsScreen(
-                providerId = providerId,
-                onBackClick = {
-                    navController.popBackStack()
-                },
-                onBookNowClick = { selectedProviderId ->
-                    navController.navigate(
-                        Screen.ServiceBooking.createRoute(
-                            selectedProviderId
-                        )
-                    )
-                }
-            )
-        }
-
-        // Service booking form
-        composable(
-            route = Screen.ServiceBooking.route,
-            arguments = listOf(
-                navArgument(
-                    Screen.ServiceBooking.ARG_PROVIDER_ID
-                ) {
-                    type = NavType.IntType
-                }
-            )
-        ) { backStackEntry ->
-            val providerId =
-                backStackEntry.arguments
-                    ?.getInt(
-                        Screen.ServiceBooking.ARG_PROVIDER_ID
-                    )
-                    ?: 0
-
-            ServiceBookingScreen(
-                providerId = providerId,
-                onBackClick = {
-                    navController.popBackStack()
-                },
-                onBookingConfirmed = { bookingId ->
-                    navController.navigate(
-                        Screen.BookingConfirmation.createRoute(
-                            bookingId
-                        )
-                    ) {
-                        popUpTo(
-                            Screen.ServiceBooking.route
-                        ) {
-                            inclusive = true
-                        }
-                    }
-                }
-            )
-        }
-
-        // Booking confirmation
-        composable(
-            route = Screen.BookingConfirmation.route,
-            arguments = listOf(
-                navArgument(
-                    Screen.BookingConfirmation.ARG_BOOKING_ID
-                ) {
-                    type = NavType.LongType
-                }
-            )
-        ) { backStackEntry ->
-            val bookingId =
-                backStackEntry.arguments
-                    ?.getLong(
-                        Screen.BookingConfirmation.ARG_BOOKING_ID
-                    )
-                    ?: 0L
-
-            BookingConfirmationScreen(
-                bookingId = bookingId,
-                onViewBookingsClick = {
-                    navController.navigate(
-                        Screen.Bookings.route
-                    ) {
                         popUpTo(Screen.Home.route)
                         launchSingleTop = true
                     }
                 },
-                onHomeClick = {
-                    navController.navigate(
-                        Screen.Home.route
-                    ) {
-                        popUpTo(Screen.Home.route) {
-                            inclusive = false
-                        }
-
-                        launchSingleTop = true
-                    }
-                }
+                confirmation = true,
             )
         }
-
-        // Messages
         composable(
-            route = Screen.Messages.route
-        ) {
-            MessagesScreen()
-        }
-
-        // Booking details
-        composable(
-            route = Screen.BookingDetails.route,
-            arguments = listOf(
-                navArgument(
-                    Screen.BookingDetails.ARG_BOOKING_ID
-                ) {
-                    type = NavType.LongType
-                }
-            )
-        ) { backStackEntry ->
-            val bookingId =
-                backStackEntry.arguments
-                    ?.getLong(
-                        Screen.BookingDetails.ARG_BOOKING_ID
-                    )
-                    ?: 0L
-
-            BookingDetailsScreen(
-                bookingId = bookingId,
-                onBackClick = {
-                    navController.popBackStack()
-                },
-                onCancelClick = {
-                    BookingStore.cancelBooking(bookingId)
-                    navController.popBackStack()
-                }
+            Screen.BookingDetails.route,
+            arguments =
+                listOf(
+                    navArgument(Screen.BookingDetails.ARG_BOOKING_ID) { type = NavType.StringType }
+                ),
+        ) { entry ->
+            ConnectedBookingDetails(
+                entry.arguments?.getString(Screen.BookingDetails.ARG_BOOKING_ID).orEmpty(),
+                market,
+                onBack = back,
             )
         }
     }

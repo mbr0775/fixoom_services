@@ -330,7 +330,7 @@ private fun IdentityCard(
                 )
                 Button(
                     onClick = when (account) {
-                        ProfileAccountState.Guest -> onExplore
+                        ProfileAccountState.Guest -> onAccountDetails
                         ProfileAccountState.Unavailable -> onRetry
                         else -> onAccountDetails
                     },
@@ -340,7 +340,7 @@ private fun IdentityCard(
                     contentPadding = PaddingValues(horizontal = 18.dp, vertical = 12.dp)
                 ) {
                     Text(stringResource(when (account) {
-                        ProfileAccountState.Guest -> R.string.profile_explore
+                        ProfileAccountState.Guest -> R.string.profile_sign_in
                         ProfileAccountState.Unavailable -> R.string.profile_retry
                         else -> R.string.profile_account_details
                     }), modifier = Modifier.weight(1f, fill = false))

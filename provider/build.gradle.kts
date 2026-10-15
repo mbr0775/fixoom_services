@@ -82,6 +82,7 @@ kotlin {
 }
 
 dependencies {
+    implementation(project(":marketplace-ui"))
     // Shared Fixoom module
     implementation(project(":core"))
 

@@ -26,3 +26,4 @@ rootProject.name = "Fixoom_Services"
 include(":app")
 include(":provider")
 include(":core")
+include(":marketplace-ui")

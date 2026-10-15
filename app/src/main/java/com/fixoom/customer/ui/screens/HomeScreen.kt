@@ -113,6 +113,10 @@ import com.fixoom.customer.ui.location.HomeLocationViewModel
 import com.fixoom.customer.ui.components.homeHeaderWaves
 import com.fixoom.customer.ui.discovery.HomeServiceDiscovery
 import com.fixoom.customer.ui.discovery.ServiceCategoryUi
+import com.fixoom.core.model.ServiceCategory
+import com.fixoom.core.model.ServiceProfessional
+import com.fixoom.marketplace.ui.ProfessionalSummary
+import com.fixoom.marketplace.ui.InfoCard
 import com.fixoom.customer.ui.theme.FixoomLavender
 import com.fixoom.customer.ui.theme.FixoomLime
 import com.fixoom.customer.ui.theme.FixoomMint
@@ -139,7 +143,7 @@ private val homeHeroBanners = listOf(
         category = "Plumbing",
         eyebrow = "FAST PLUMBING HELP",
         title = "Stop leaks before they become disasters.",
-        description = "Book verified plumbers for urgent repairs and maintenance.",
+        description = "Request plumbing repairs from approved service providers.",
         actionLabel = "Book a plumber",
         videoRes = R.raw.plumbing_animations
     ),
@@ -251,7 +255,13 @@ private val featuredProfessionals = listOf(
 @Composable
 fun HomeScreen(
     onServiceClick: (String) -> Unit,
-    onNotificationsClick: () -> Unit = {}
+    onNotificationsClick: () -> Unit = {},
+    categories: List<ServiceCategory> = emptyList(),
+    professionals: List<ServiceProfessional> = emptyList(),
+    onProviderClick: (String) -> Unit = {},
+    loading: Boolean = false,
+    dataError: String? = null,
+    onRefresh: () -> Unit = {}
 ) {
     val listState = rememberLazyListState()
     val homeScope = rememberCoroutineScope()
@@ -311,14 +321,20 @@ fun HomeScreen(
                             onLocationClick = { showLocationPicker = true }
                         )
                         ServiceHeroCarousel(
-                            onServiceClick = onServiceClick
+                            onServiceClick = onServiceClick,
+                            enabledCategories = categories.map { it.name }.toSet()
                         )
                     }
                 }
 
                 item(key = "service_discovery") {
+                    if(loading) androidx.compose.material3.LinearProgressIndicator(Modifier.fillMaxWidth().padding(horizontal=20.dp))
+                    dataError?.let { InfoCard("Unable to refresh services",it,error=true) { androidx.compose.material3.TextButton(onRefresh){Text("Try again")} } }
                     HomeServiceDiscovery(
-                        services = homeServices,
+                        services = categories.map { category ->
+                            homeServices.firstOrNull { it.title.equals(category.name,true) }?.copy(description=category.description)
+                                ?: ServiceCategoryUi(category.name,category.description,R.drawable.ic_service_cleaning,FixoomMint)
+                        },
                         onServiceClick = onServiceClick
                     )
                 }
@@ -328,11 +344,11 @@ fun HomeScreen(
                 }
 
                 item(key = "featured_professionals") {
-                    FeaturedProfessionalsSection(
-                        onProfessionalClick = { professional ->
-                            onServiceClick(professional.service)
-                        }
-                    )
+                    Column(Modifier.padding(horizontal=20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+                        Text("Available professionals",style=MaterialTheme.typography.titleLarge)
+                        if(professionals.isEmpty()) InfoCard("Your service network","Approved professionals appear here when they are available for requests.")
+                        professionals.take(4).forEach { professional -> ProfessionalSummary(professional,categories.find { it.slug==professional.categorySlug }?.name.orEmpty()){onProviderClick(professional.id)} }
+                    }
                 }
 
                 item(key = "how_it_works") {
@@ -942,21 +958,24 @@ private fun LegacyHomeHeader() {
 
 @Composable
 private fun ServiceHeroCarousel(
-    onServiceClick: (String) -> Unit
+    onServiceClick: (String) -> Unit,
+    enabledCategories: Set<String>
 ) {
+    val banners = homeHeroBanners.filter { it.category in enabledCategories }
+    if(banners.isEmpty()) return
     val pagerState = rememberPagerState(
         initialPage = 0,
-        pageCount = { homeHeroBanners.size }
+        pageCount = { banners.size }
     )
     val carouselScope = rememberCoroutineScope()
 
-    LaunchedEffect(pagerState) {
+    LaunchedEffect(pagerState,banners.size) {
         while (true) {
             delay(3_000)
 
             if (!pagerState.isScrollInProgress) {
                 val nextPage =
-                    (pagerState.currentPage + 1) % homeHeroBanners.size
+                    (pagerState.currentPage + 1) % banners.size
 
                 pagerState.animateScrollToPage(nextPage)
             }
@@ -971,14 +990,14 @@ private fun ServiceHeroCarousel(
         HorizontalPager(
             state = pagerState,
             modifier = Modifier.fillMaxSize(),
-            key = { page -> homeHeroBanners[page].category }
+            key = { page -> banners[page].category }
         ) { page ->
             HomeHeroBannerPage(
-                banner = homeHeroBanners[page],
+                banner = banners[page],
                 isActive = pagerState.currentPage == page &&
                         !pagerState.isScrollInProgress,
                 onActionClick = {
-                    onServiceClick(homeHeroBanners[page].category)
+                    onServiceClick(banners[page].category)
                 }
             )
         }
@@ -993,7 +1012,7 @@ private fun ServiceHeroCarousel(
             horizontalArrangement = Arrangement.spacedBy(7.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            homeHeroBanners.indices.forEach { page ->
+            banners.indices.forEach { page ->
                 val indicatorWidth by animateDpAsState(
                     targetValue = if (pagerState.currentPage == page) {
                         26.dp
@@ -1909,7 +1928,7 @@ private fun TrustStrip() {
         ) {
             TrustItem(
                 icon = Icons.Rounded.Shield,
-                title = "Verified",
+                title = "Approved",
                 subtitle = "professionals"
             )
 
@@ -1925,8 +1944,8 @@ private fun TrustStrip() {
 
             TrustItem(
                 icon = Icons.Rounded.Star,
-                title = "Rated",
-                subtitle = "services"
+                title = "Direct",
+                subtitle = "payment"
             )
         }
     }
@@ -2570,7 +2589,7 @@ private fun HowFixoomWorks() {
                                 )
 
                                 Text(
-                                    text = "Verified providers • Secure booking",
+                                    text = "Approved providers • Secure booking",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = Color.White.copy(alpha = 0.72f)
                                 )

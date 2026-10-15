@@ -95,6 +95,7 @@ kotlin {
 }
 
 dependencies {
+    implementation(project(":marketplace-ui"))
     // Shared code used by Customer and Provider apps
     implementation(
         project(":core")
