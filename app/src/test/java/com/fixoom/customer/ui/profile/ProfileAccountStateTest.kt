@@ -32,7 +32,7 @@ class ProfileAccountStateTest {
     }
 
     @Test fun `restricted account states do not display an active account`() {
-        listOf(AccountStatus.PENDING, AccountStatus.SUSPENDED, AccountStatus.REJECTED).forEach {
+        listOf(AccountStatus.PENDING, AccountStatus.SUSPENDED, AccountStatus.REJECTED, AccountStatus.DELETED).forEach {
             assertEquals(ProfileAccountState.Unavailable, profile(status = it).toCustomerAccountState())
         }
     }

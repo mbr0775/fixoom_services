@@ -1,57 +1,82 @@
 package com.fixoom.provider.ui.theme
 
-import android.app.Activity
-import android.os.Build
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.Color
 
-private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
+private val FixoomLightColorScheme = lightColorScheme(
+    primary = FixoomTeal,
+    onPrimary = Color.White,
+    primaryContainer = FixoomTealDark,
+    onPrimaryContainer = Color.White,
+
+    secondary = FixoomLime,
+    onSecondary = FixoomTealDark,
+    secondaryContainer = FixoomLavender,
+    onSecondaryContainer = FixoomText,
+
+    tertiary = FixoomOrange,
+    onTertiary = Color.White,
+    tertiaryContainer = FixoomPeach,
+    onTertiaryContainer = FixoomText,
+
+    background = FixoomBackground,
+    onBackground = FixoomText,
+
+    surface = FixoomCard,
+    onSurface = FixoomText,
+    surfaceVariant = FixoomSurfaceSoft,
+    onSurfaceVariant = FixoomSecondaryText,
+
+    outline = FixoomBorder,
+
+    error = FixoomRed,
+    onError = Color.White
 )
 
-private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
+private val FixoomDarkColorScheme = darkColorScheme(
+    primary = FixoomLime,
+    onPrimary = FixoomTealDark,
+    primaryContainer = FixoomTeal,
+    onPrimaryContainer = Color.White,
 
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
+    secondary = FixoomLavender,
+    onSecondary = FixoomTealDark,
+    secondaryContainer = FixoomDarkSurfaceSoft,
+    onSecondaryContainer = FixoomDarkText,
+
+    tertiary = FixoomOrange,
     onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
+    tertiaryContainer = FixoomDarkSurfaceSoft,
+    onTertiaryContainer = FixoomDarkText,
+
+    background = FixoomDarkBackground,
+    onBackground = FixoomDarkText,
+
+    surface = FixoomDarkSurface,
+    onSurface = FixoomDarkText,
+    surfaceVariant = FixoomDarkSurfaceSoft,
+    onSurfaceVariant = FixoomDarkSecondaryText,
+
+    outline = FixoomDarkBorder,
+
+    error = Color(0xFFFFB4AB),
+    onError = Color(0xFF690005)
 )
 
 @Composable
 fun Fixoom_ServicesTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
+    darkTheme: Boolean = androidx.compose.foundation.isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
-    }
-
     MaterialTheme(
-        colorScheme = colorScheme,
+        colorScheme = if (darkTheme) {
+            FixoomDarkColorScheme
+        } else {
+            FixoomLightColorScheme
+        },
         typography = Typography,
         content = content
     )

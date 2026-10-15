@@ -16,5 +16,8 @@ enum class AccountStatus {
     SUSPENDED,
 
     @SerialName("rejected")
-    REJECTED
+    REJECTED,
+
+    @SerialName("deleted")
+    DELETED
 }
