@@ -252,8 +252,8 @@ class ProviderProfileTest {
         compose.onNode(hasScrollToNodeAction()).performScrollToNode(hasText("Personal details"))
         compose.onNodeWithText("Personal details").performClick()
         compose.mainClock.advanceTimeBy(32)
-        compose.onNodeWithText("No phone supplied").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("Personal details").performScrollTo().performClick()
+        compose.onNodeWithText("No phone supplied").assertExists()
+        compose.onNodeWithText("Personal details").performClick()
         compose.mainClock.advanceTimeBy(32)
         compose.onNodeWithText("No phone supplied").assertDoesNotExist()
         compose.onNodeWithContentDescription("Edit profile").performClick()
@@ -262,6 +262,39 @@ class ProviderProfileTest {
         compose.onNodeWithContentDescription("Back").performClick()
         compose.mainClock.advanceTimeBy(32)
         compose.onNodeWithText("My profile").assertIsDisplayed()
+    }
+
+    @Test
+    fun expandedFieldsSupportLongValuesAndLargeTextWithoutBecomingEditable() {
+        val email = "professional.with.a.long.email.address@example.invalid"
+        compose.setContent {
+            val density = LocalDensity.current
+            CompositionLocalProvider(LocalDensity provides Density(density.density, 1.5f)) {
+                ProfileTestSurface {
+                    ProviderProfileScreens(
+                        fixture.copy(
+                            data =
+                                fixture.data.copy(
+                                    profile = fixture.data.profile!!.copy(email = email)
+                                )
+                        ),
+                        false,
+                        {},
+                        {},
+                        { _, _, _, _, _, _ -> },
+                        { _, _ -> },
+                        {},
+                        {},
+                    )
+                }
+            }
+        }
+        compose.onNode(hasScrollToNodeAction()).performScrollToNode(hasText("Personal details"))
+        compose.onNodeWithText("Personal details").performClick()
+        compose.onNodeWithText(email).performScrollTo().assertIsDisplayed()
+        screenshot("fields-large-text")
+        compose.onNodeWithText("+94110000000").performScrollTo().assertIsDisplayed()
+        compose.onAllNodes(hasSetTextAction()).assertCountEquals(0)
     }
 
     @Composable

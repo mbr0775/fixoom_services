@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.*
@@ -166,17 +165,28 @@ internal fun ProviderProfileOverview(
                             personalAdded,
                             motionEnabled,
                         ) {
-                            ProfileDetail(
+                            ProfileDetailField(
                                 "Full name",
                                 profile.fullName.orEmpty().ifBlank { "Not added yet" },
+                                ProfileDetailIcons.Person,
+                                ProfileMint,
+                                motionEnabled,
                             )
-                            ProfileDetail(
+                            ProfileDetailField(
                                 "Email address",
                                 profile.email.orEmpty().ifBlank { "No email supplied" },
+                                ProfileDetailIcons.Email,
+                                ProfileLavender,
+                                motionEnabled,
+                                order = 1,
                             )
-                            ProfileDetail(
+                            ProfileDetailField(
                                 "Phone number",
                                 profile.phone.orEmpty().ifBlank { "No phone supplied" },
+                                ProfileDetailIcons.Phone,
+                                ProfilePeach,
+                                motionEnabled,
+                                order = 2,
                             )
                         }
                         ProfileSectionDivider()
@@ -193,12 +203,22 @@ internal fun ProviderProfileOverview(
                             serviceAdded,
                             motionEnabled,
                         ) {
-                            ProfileDetail("Service category", category ?: "Not added yet")
-                            ProfileDetail(
+                            ProfileDetailField(
+                                "Service category",
+                                category ?: "Not added yet",
+                                ProfileDetailIcons.Category,
+                                ProfileLavender,
+                                motionEnabled,
+                            )
+                            ProfileDetailField(
                                 "Service area",
                                 service?.serviceArea.orEmpty().ifBlank { "Not added yet" },
+                                ProfileDetailIcons.Location,
+                                ProfileMint,
+                                motionEnabled,
+                                order = 1,
                             )
-                            ProfileDetail(
+                            ProfileDetailField(
                                 "Availability",
                                 when {
                                     pending -> "Available after approval"
@@ -207,6 +227,10 @@ internal fun ProviderProfileOverview(
                                     service?.isAvailable == true -> "Available for new requests"
                                     else -> "Not accepting new requests"
                                 },
+                                ProfileDetailIcons.Availability,
+                                ProfileMint,
+                                motionEnabled,
+                                order = 2,
                             )
                         }
                         ProfileSectionDivider()
@@ -219,9 +243,12 @@ internal fun ProviderProfileOverview(
                             aboutAdded,
                             motionEnabled,
                         ) {
-                            ProfileDetail(
+                            ProfileDetailField(
                                 "Experience and services",
                                 service?.bio.orEmpty().ifBlank { "No description added yet" },
+                                ProfileDetailIcons.Introduction,
+                                ProfilePeach,
+                                motionEnabled,
                             )
                         }
                     }
@@ -538,10 +565,8 @@ private fun ProfileSection(
             Column(
                 Modifier.padding(start = 18.dp, end = 18.dp, bottom = 18.dp)
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(Color(0xFFF5F8F7))
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(18.dp),
+                    .padding(top = 2.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 content()
             }
@@ -587,23 +612,4 @@ private fun ProfileSectionSymbol(icon: ImageVector, accent: Color) {
 @Composable
 private fun ProfileSectionDivider() {
     HorizontalDivider(Modifier.padding(start = 76.dp, end = 18.dp), color = Color(0xFFEDF1F0))
-}
-
-@Composable
-private fun ProfileDetail(label: String, value: String) {
-    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-        Text(
-            label,
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        SelectionContainer {
-            Text(
-                value,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium,
-                color = ProfileInk,
-            )
-        }
-    }
 }

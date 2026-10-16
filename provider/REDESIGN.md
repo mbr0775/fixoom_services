@@ -59,3 +59,9 @@ Verification: both debug APKs built and were installed on the Honor with account
 The details section uses one clean grouped panel with inset dividers, custom monoline contact/briefcase/introduction vectors, softly layered icon tiles and a single expand control per row. Saved values open in a quiet inset panel and support text selection/copy. Section expansion, motion preferences, view-first navigation and the shared backend remain connected. The larger heading and reduced icon clutter improve the hierarchy without adding dependencies or operational data.
 
 Both APKs built and were installed on the Honor with account data retained. All five existing profile checks passed, including large text, reduced motion, navigation, validation and save outcomes. The real grouped section and expanded saved values were inspected on the phone; screenshots were reviewed and no profile data was changed during QA.
+
+## Saved field cards with motion
+
+Expanded full name, email, phone, category, area, availability and introduction now use individual raised cards with dedicated monoline icons, a soft coloured backplate and readable, selectable values. Cards enter with a short staggered lift and perspective tilt when the section opens. This is a finite reveal; the text rests still for reading. System motion preferences bypass the reveal, and values wrap naturally without fixed heights.
+
+Validation: both APKs built and were installed on the Honor without clearing account data. All six profile device checks passed, including a new long-email/large-text case. The paused-clock test checks offscreen field presence without waiting for a scroll frame; the large-text check exercises scrolling and visibility. Screenshots of normal saved values and large-text fixtures were reviewed. Real full-name, email and phone rendering remains read-only and no provider data was changed during testing.
