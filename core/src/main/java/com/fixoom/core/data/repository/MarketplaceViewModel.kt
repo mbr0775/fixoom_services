@@ -85,6 +85,33 @@ class MarketplaceViewModel : ViewModel() {
         }
     }
 
+    fun saveProviderPhoto(jpeg: ByteArray?, onSaved: () -> Unit = {}) {
+        if (mutable.value.saving) return
+        mutable.value = mutable.value.copy(saving = true, error = null, notice = null)
+        viewModelScope.launch {
+            try {
+                val path = withTimeout(45_000) { ProviderPhotoRepository().save(jpeg) }
+                val data = mutable.value.data
+                mutable.value = mutable.value.copy(
+                    data = data.copy(
+                        profile = data.profile?.copy(avatarUrl = path),
+                        ownService = data.ownService?.copy(avatarPath = path),
+                    ),
+                    notice = if (path == null) "Profile photo removed." else "Profile photo updated.",
+                )
+                onSaved()
+                load()
+            } catch (cancelled: CancellationException) {
+                if (cancelled !is kotlinx.coroutines.TimeoutCancellationException) throw cancelled
+                mutable.value = mutable.value.copy(error = "Photo upload timed out. Refresh your profile before retrying.")
+            } catch (_: Exception) {
+                mutable.value = mutable.value.copy(error = "Your photo could not be saved. Check your connection and try again.")
+            } finally {
+                mutable.value = mutable.value.copy(saving = false)
+            }
+        }
+    }
+
     fun authenticate(
         register: Boolean,
         name: String,

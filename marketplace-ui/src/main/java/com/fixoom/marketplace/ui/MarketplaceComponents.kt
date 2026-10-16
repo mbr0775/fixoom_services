@@ -159,6 +159,7 @@ fun BookingSummary(booking: ServiceBooking, provider: Boolean, onOpen: () -> Uni
 fun ProfessionalSummary(professional: ServiceProfessional, category: String, onOpen: () -> Unit) {
     Card(onClick = onOpen, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp)) {
         Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+            ProviderPhoto(professional.avatarPath, professional.displayName, Modifier.size(56.dp))
             Text(
                 category,
                 style = MaterialTheme.typography.labelLarge,

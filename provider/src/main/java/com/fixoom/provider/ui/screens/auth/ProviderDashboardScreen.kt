@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.fixoom.core.model.Profile
 import com.fixoom.provider.R
+import com.fixoom.marketplace.ui.ProviderPhoto
 import com.fixoom.provider.ui.components.ProviderBrand
 import com.fixoom.provider.ui.components.ProviderDepthHero
 import com.fixoom.provider.ui.theme.FixoomLime
@@ -71,7 +72,7 @@ fun ProviderDashboardScreen(
                 IconButton(onClick = onOpenProfile,
                     modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant, CircleShape).size(48.dp)
                         .semantics { contentDescription = profileLabel }) {
-                    Text(displayName.take(1).uppercase(), style = MaterialTheme.typography.titleMedium)
+                    ProviderPhoto(profile.avatarUrl, displayName, Modifier.size(42.dp))
                 }
             }
             Text(stringResource(R.string.provider_greeting, displayName),

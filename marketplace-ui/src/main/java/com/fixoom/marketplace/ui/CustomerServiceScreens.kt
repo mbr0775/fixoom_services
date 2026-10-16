@@ -92,6 +92,7 @@ fun ConnectedProviderDetails(
                     provider.displayName,
                     state.data.categories.find { it.slug == provider.categorySlug }?.name.orEmpty(),
                 ) {
+                    ProviderPhoto(provider.avatarPath, provider.displayName, Modifier.size(112.dp))
                     Text("Service area: ${provider.serviceArea}")
                     Text(
                         provider.bio.ifBlank { "This professional has not added an introduction." }

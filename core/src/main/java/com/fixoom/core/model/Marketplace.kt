@@ -22,6 +22,7 @@ data class ServiceProfessional(
     @SerialName("service_area") val serviceArea: String = "",
     val bio: String = "",
     @SerialName("is_available") val isAvailable: Boolean = false,
+    @SerialName("avatar_path") val avatarPath: String? = null,
 )
 
 @Serializable

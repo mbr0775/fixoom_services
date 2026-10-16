@@ -68,3 +68,7 @@ The Supabase security advisor has no schema/RLS warnings for this delivery. Leak
 ### Real provider discovery
 
 Home, Explore and provider booking routes read the same Supabase directory. Explore cards open the actual provider ID, with no invented ratings, distance or example professionals. The provider must be approved, available, and have a display name, active category and service area. If none qualify, customers see an empty state. Do not create a demo provider to fill it. SMS/WhatsApp phone verification is deferred; entering a contact number alone does not verify ownership.
+
+### Provider profile photo
+
+Provider Profile → Add/Change photo opens Android Photo Picker. Review the centered preview, then Save photo; Discard leaves the saved photo unchanged. Remove photo clears it. The private shared Storage bucket accepts JPEG uploads up to 1 MB; mobile preparation resizes selected images and strips EXIF/location metadata. The photo is shown on provider home, customer directory/details and admin review. Pending photos remain owner/admin-only; public read requires an approved provider with a complete active service profile. Do not select an arbitrary personal image on behalf of a real user during testing.

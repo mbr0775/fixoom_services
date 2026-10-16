@@ -375,6 +375,14 @@ fun ConnectedProviderProfile(
     var available by rememberSaveable(service?.id) { mutableStateOf(service?.isAvailable ?: false) }
     var validation by remember { mutableStateOf<String?>(null) }
     MarketplacePage("Professional profile", state, vm::refresh, onBack) {
+        item {
+            ProviderPhotoEditor(
+                service?.avatarPath,
+                name.ifBlank { state.data.profile?.fullName.orEmpty() },
+                state.saving || service == null,
+                vm::saveProviderPhoto,
+            )
+        }
         if (pending)
             item {
                 InfoCard(

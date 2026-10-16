@@ -19,3 +19,11 @@ The original 3D/parallax dashboard remains the provider home. Eight connected ph
 The provider app always uses its light color scheme, independent of the device theme. Splash and activity launch backgrounds use the light surface palette; edge-to-edge system bars use dark icons. Android automatic force-dark rendering is disabled for this app. The existing teal/lime branding and 3D illustrations remain. The customer app's separate theme preference is unchanged.
 
 Validation: the provider debug APK and test APK built successfully, all four provider unit tests and four existing Compose screen checks passed. The updated app was installed with data preserved on the Honor NIC-LX2 while Android night mode was enabled; live app and isolated dashboard screenshots were captured for visual review.
+
+## Provider profile photos — October 16, 2026
+
+Professional profile now has Add/Change photo, an explicit preview and Save photo, plus Remove photo. Android Photo Picker grants access to only the selected image. Input is limited to 15 MB, orientation is corrected, and the centered image is encoded as a JPEG up to 512 × 512 with EXIF/location metadata removed. Storage uploads use unique paths and the existing signed-in session. A validated backend RPC publishes the owned photo; replacements clean up the old object after publication. Interrupted/ambiguous saves require refresh before retrying and never fake success.
+
+Photos appear in the provider dashboard, customer directory/profile and administrator review. Missing photos use initials. The bucket is private: owners/admins can review pending photos; customers and guests can read only the current photo of an approved provider with a complete active service profile.
+
+Photo verification passed 48 unit tests, six provider Compose checks, five rollback-only SQL suites and the admin browser suite. The installed provider photo picker was opened and dismissed without selecting any personal media. Existing account/session data was preserved.

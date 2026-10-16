@@ -76,3 +76,9 @@ Home, Explore, category lists and provider details use only the shared Supabase 
 Three isolated SDK tests cover empty results, returned identity/profile completeness and backend failure without sample fallback. `RealProviderDiscoveryTest` exercises Explore with isolated screen inputs, including directory updates, exact provider ID navigation and error recovery. It neither signs into a user's account nor writes fixtures to production.
 
 Validation for this update: 44 core/customer/provider unit tests passed, both debug APKs built and installed on the Honor NIC-LX2, and both `RealProviderDiscoveryTest` instrumentation checks passed using a manually installed test APK (without clearing the app data). The live guest directory returned zero eligible providers at verification time; no production accounts were added or approved for this check.
+
+## Provider profile photos
+
+In the Provider app, open Profile → Add photo (or Change photo), choose an image in Android Photo Picker, review it and tap Save photo. Remove photo clears the published image. Uploads stay in the shared Supabase project in the private `provider-photos` bucket. The photo appears on the provider dashboard, real customer provider cards/details and admin review. Pending providers can upload a photo for review; public visibility follows approval and a complete service profile. Image preparation, SDK request ordering and rollback-only Storage permission tests cover the feature.
+
+Photo-update validation: both debug apps built and were installed with app data preserved. All 48 unit tests, six provider screen checks, five rollback-only SQL permission suites and the admin browser suite passed. The real provider profile opens Android Photo Picker. No personal photo was chosen or uploaded by the agent; the user selects and saves their own image.

@@ -1,6 +1,6 @@
 # Fixoom connected database
 
-These migrations extend the existing Supabase project `mzkrxovluljvsqzbowwb` and its pre-existing `profiles`, `app_role`, `account_status` and profile timestamp trigger. They are **not an initial schema for an empty project**. All six migrations in this directory have been applied to the existing live project. Do not apply them again manually to that project.
+These migrations extend the existing Supabase project `mzkrxovluljvsqzbowwb` and its pre-existing `profiles`, `app_role`, `account_status` and profile timestamp trigger. They are **not an initial schema for an empty project**. All seven migrations in this directory have been applied to the existing live project. Do not apply them again manually to that project.
 
 The versioned source is `platform/database` on `main` in [fixoom_services](https://github.com/mbr0775/fixoom_services). The local workspace's `Fixoom_Platform/database` is the working source used for this delivery; keep both copies synchronized when making future migrations. The admin repository is separate.
 
@@ -12,6 +12,8 @@ The versioned source is `platform/database` on `main` in [fixoom_services](https
 4. Customer moderation: administrator-only suspend/restore with audit history.
 5. Contact phone normalization: accept Sri Lankan local and international formats, store E.164, fix the leading-plus constraint, and recover missing profile contacts from original signup metadata. Contact numbers can be shared between email accounts; email/session identity and role checks remain unchanged.
 6. Profile email contacts: mirror authoritative Auth email into the private profile on registration and email changes, including existing accounts. Own-account/admin RLS protects this contact field; clients cannot overwrite it directly, and the public provider directory does not expose it.
+
+7. Provider profile photos: a private JPEG-only bucket (1 MB), ownership checks, approved-directory read access, and a validated photo RPC synchronize private/profile directory paths. Clients cannot set arbitrary photo URLs or overwrite immutable photo objects.
 
 Android and web clients use a public key plus the signed-in user's session. Server-side role, account-state and ownership checks authorize operations; RLS protects participant data. Booking events/messages cannot be inserted directly by clients. Admins can inspect a conversation but cannot send messages impersonating its participants.
 
@@ -28,3 +30,5 @@ Run `tests/platform_access.sql` and `tests/connected_workflow.sql` as a database
 The original test verifies registration, protection against self-assigned admin roles, administrator review, ownership isolation, booking lifecycle and anonymous access. The connected test adds pending profile setup, availability, idempotency, final amount and receipt handling, participant chat, event history, customer moderation and restricted-account isolation. Both passed against the configured project on October 15, 2026.
 
 The Supabase security advisor reports no schema/RLS warnings for this delivery. Leaked-password protection remains disabled; review [Supabase password protection](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection) before public release.
+
+`tests/provider_photos.sql` checks provider-owned uploads and publication, pending-photo privacy, customer/admin access, denial of arbitrary URLs and overwrites, suspension and removal. It uses rollback-only metadata fixtures (no files or users remain). All five SQL suites passed after the photo migration. The Storage API stores actual images; SQL tests validate authorization only.
