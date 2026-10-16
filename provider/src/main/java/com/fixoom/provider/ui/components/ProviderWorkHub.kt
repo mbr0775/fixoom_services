@@ -283,56 +283,82 @@ private fun WorkCard(
                 )
             }
         } else {
-            Column(
-                Modifier.fillMaxWidth().heightIn(min = 158.dp).padding(17.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                Row(
-                    Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.Top,
-                    horizontalArrangement = Arrangement.SpaceBetween,
+            Box {
+                if (shortcut.glyph == WorkGlyph.Active) {
+                    ActiveJobsVideoBackground(
+                        playing = motionEnabled && visible,
+                        modifier = Modifier.matchParentSize(),
+                    )
+                    Box(
+                        Modifier.matchParentSize()
+                            .background(
+                                Brush.verticalGradient(
+                                    0f to Color.Transparent,
+                                    .32f to shortcut.color.copy(alpha = .05f),
+                                    .6f to shortcut.color.copy(alpha = .96f),
+                                    1f to shortcut.color,
+                                )
+                            )
+                    )
+                }
+                Column(
+                    Modifier.fillMaxWidth().heightIn(min = 158.dp).padding(17.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    Box(
-                        Modifier.size(44.dp)
-                            .graphicsLayer {
-                                rotationZ = -5f + wave() * 5f + pressure * 8f
-                                rotationX = wave(1.57f) * 14f
-                                rotationY = wave() * 18f + parallax() * 9f
-                                translationY = (wave() * 4f - pressure * 3f) * density
-                                scaleX = 1f + wave(1.57f) * .025f
-                                scaleY = scaleX
-                                shadowElevation = (6f + wave() * 2f).dp.toPx()
-                                cameraDistance = 14 * density
-                                shape = RoundedCornerShape(15.dp)
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.Top,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        if (shortcut.glyph == WorkGlyph.Active) {
+                            Spacer(Modifier.size(44.dp))
+                        } else
+                            Box(
+                                Modifier.size(44.dp)
+                                    .graphicsLayer {
+                                        rotationZ = -5f + wave() * 5f + pressure * 8f
+                                        rotationX = wave(1.57f) * 14f
+                                        rotationY = wave() * 18f + parallax() * 9f
+                                        translationY = (wave() * 4f - pressure * 3f) * density
+                                        scaleX = 1f + wave(1.57f) * .025f
+                                        scaleY = scaleX
+                                        shadowElevation = (6f + wave() * 2f).dp.toPx()
+                                        cameraDistance = 14 * density
+                                        shape = RoundedCornerShape(15.dp)
+                                    }
+                                    .background(
+                                        Color.White.copy(alpha = .9f),
+                                        RoundedCornerShape(15.dp),
+                                    ),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                WorkLineIcon(shortcut.glyph, Modifier.size(24.dp), FixoomTealDark)
                             }
-                            .background(Color.White.copy(alpha = .9f), RoundedCornerShape(15.dp)),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        WorkLineIcon(shortcut.glyph, Modifier.size(24.dp), FixoomTealDark)
+                        Box(
+                            Modifier.size(27.dp)
+                                .background(Color.White.copy(alpha = .5f), CircleShape),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                Icons.AutoMirrored.Rounded.ArrowForward,
+                                null,
+                                Modifier.size(14.dp),
+                                tint = FixoomTealDark,
+                            )
+                        }
                     }
-                    Box(
-                        Modifier.size(27.dp).background(Color.White.copy(alpha = .5f), CircleShape),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            Icons.AutoMirrored.Rounded.ArrowForward,
-                            null,
-                            Modifier.size(14.dp),
-                            tint = FixoomTealDark,
+                    Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                        Text(
+                            stringResource(shortcut.title),
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                        )
+                        Text(
+                            stringResource(shortcut.detail),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFF4F6665),
                         )
                     }
-                }
-                Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                    Text(
-                        stringResource(shortcut.title),
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold,
-                    )
-                    Text(
-                        stringResource(shortcut.detail),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFF4F6665),
-                    )
                 }
             }
         }
