@@ -44,7 +44,8 @@ fun ProviderDashboardScreen(
     onOpenProfile: () -> Unit,
     onOpenNotifications: () -> Unit,
     onSignOut: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onOpenHistory: (() -> Unit)? = null,
 ) {
     val scroll = rememberScrollState()
     val displayName = profile.fullName?.trim()?.takeIf { it.isNotEmpty() }
@@ -58,6 +59,7 @@ fun ProviderDashboardScreen(
                 ProviderNavItem(true, Icons.Rounded.Home, stringResource(R.string.provider_home), {}, "home")
                 ProviderNavItem(false, Icons.Rounded.Handyman, stringResource(R.string.provider_requests), onOpenJobRequests, "requests")
                 ProviderNavItem(false, Icons.Rounded.CalendarMonth, stringResource(R.string.provider_schedule), onOpenSchedule, "schedule")
+                if (onOpenHistory != null) ProviderNavItem(false, Icons.Rounded.History, stringResource(R.string.provider_history_nav), onOpenHistory, "history")
                 ProviderNavItem(false, Icons.Rounded.PersonOutline, stringResource(R.string.provider_profile), onOpenProfile, "profile")
             }
         }
@@ -101,6 +103,7 @@ fun ProviderDashboardScreen(
                 WorkAction(Icons.Rounded.Handyman, R.string.provider_job_requests, R.string.provider_job_requests_detail, Color(0xFFCDEED8), onOpenJobRequests)
                 WorkAction(Icons.Rounded.WorkHistory, R.string.provider_active_jobs, R.string.provider_active_jobs_detail, Color(0xFFD9CCFF), onOpenActiveJobs)
                 WorkAction(Icons.Rounded.CalendarMonth, R.string.provider_schedule, R.string.provider_schedule_detail, Color(0xFFDDEFF3), onOpenSchedule)
+                if (onOpenHistory != null) WorkAction(Icons.Rounded.History, R.string.provider_request_history, R.string.provider_request_history_detail, Color(0xFFE1EED8), onOpenHistory)
                 WorkAction(Icons.Rounded.AccountBalanceWallet, R.string.provider_earnings, R.string.provider_earnings_detail, Color(0xFFFFE5D6), onOpenEarnings)
             }
             Surface(color = MaterialTheme.colorScheme.surfaceVariant, shape = RoundedCornerShape(22.dp)) {

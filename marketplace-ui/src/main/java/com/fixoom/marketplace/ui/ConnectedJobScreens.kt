@@ -42,6 +42,8 @@ fun ConnectedBookings(
             "schedule" -> "Your schedule"
             "activity" -> "Booking updates"
             "messages" -> "Booking conversations"
+            "history" -> "Request history"
+            "requests" -> "New requests"
             else -> if (provider) "Your jobs" else "Your bookings"
         }
     val bookings =
@@ -70,6 +72,10 @@ fun ConnectedBookings(
                         "schedule" ->
                             "Your accepted work, planned around the time reserved for each service."
                         "messages" -> "Keep every customer conversation connected to its booking."
+                        "history" ->
+                            "Every saved request stays with your account, including accepted, completed, cancelled and declined work."
+                        "requests" ->
+                            "Requests awaiting your reply. Accepted jobs move to Active jobs and remain in Request history."
                         "activity" ->
                             "Follow requests, job progress and completed work in one place."
                         else ->
@@ -110,7 +116,17 @@ fun ConnectedBookings(
                                 FilterChip(
                                     selected == filter,
                                     { selected = filter },
-                                    label = { Text(serviceStatus(filter)) },
+                                    label = {
+                                        Text(
+                                            when (filter) {
+                                                "all" -> "All"
+                                                "requested" -> "Awaiting reply"
+                                                "active" -> "Active"
+                                                "rejected" -> "Declined"
+                                                else -> serviceStatus(filter)
+                                            }
+                                        )
+                                    },
                                 )
                             }
                     }
@@ -126,7 +142,10 @@ fun ConnectedBookings(
                 item {
                     InfoCard(
                         "No bookings to show",
-                        "New service requests will appear here. You can refresh whenever you need.",
+                        if (mode == "requests")
+                            "No requests are awaiting your reply. Accepted and closed requests remain in Request history; choose All above to include them here."
+                        else
+                            "There are no saved bookings matching this filter. Try All or refresh.",
                     )
                 }
             items(bookings, key = { it.id }) { booking ->

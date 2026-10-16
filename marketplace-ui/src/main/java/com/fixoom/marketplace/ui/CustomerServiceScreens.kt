@@ -15,6 +15,8 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.fixoom.core.data.repository.BookingAvailabilityViewModel
 import com.fixoom.core.data.repository.MarketplaceViewModel
 import com.fixoom.core.model.*
 import java.time.Instant
@@ -167,8 +169,25 @@ fun ConnectedBookingForm(
         )
     }
     val requestKey = rememberSaveable { UUID.randomUUID().toString() }
+    val availabilityVm: BookingAvailabilityViewModel = viewModel(key = "availability-$id")
+    val availability by availabilityVm.state.collectAsStateWithLifecycle()
+    val selectedDay =
+        Instant.ofEpochMilli(scheduled).atZone(ZoneId.of("Asia/Colombo")).toLocalDate().toString()
+    LaunchedEffect(id, selectedDay, customer) {
+        if (customer) availabilityVm.load(id, selectedDay)
+    }
+    val availabilityReady =
+        availability.day == selectedDay && !availability.loading && availability.error == null
+    val conflict =
+        availabilityReady &&
+            availability.times.any { it.overlaps(Instant.ofEpochMilli(scheduled), durationMinutes) }
+    fun refreshAvailability() = availabilityVm.load(id, selectedDay)
     var validation by remember { mutableStateOf<String?>(null) }
-    MarketplacePage("Request a service", state, vm::refresh, onBack) {
+    LaunchedEffect(selectedCategory, durationMinutes, scheduled, address, description) {
+        vm.dismissNotice()
+        validation = null
+    }
+    MarketplacePage("Request a service", state, { vm.refresh(); if (customer) refreshAvailability() }, onBack) {
         if (!customer)
             item {
                 InfoCard(
@@ -203,6 +222,7 @@ fun ConnectedBookingForm(
                                     selectedCategory == category.slug,
                                     { selectedCategory = category.slug },
                                     label = { Text(category.name) },
+                                    enabled = !state.saving,
                                 )
                             }
                     }
@@ -213,6 +233,7 @@ fun ConnectedBookingForm(
                                 durationMinutes == minutes,
                                 { durationMinutes = minutes },
                                 label = { Text("$minutes min") },
+                                enabled = !state.saving,
                             )
                         }
                     }
@@ -294,6 +315,20 @@ fun ConnectedBookingForm(
                                 )
                         )
                     }
+                    BookingAvailabilityPanel(
+                        availability,
+                        conflict,
+                        ::refreshAvailability,
+                        {
+                            scheduled =
+                                nextUnreservedTime(
+                                        Instant.ofEpochMilli(scheduled),
+                                        durationMinutes,
+                                        availability.times,
+                                    )
+                                    .toEpochMilli()
+                        },
+                    )
                     OutlinedTextField(
                         address,
                         { if (it.length <= 500) address = it },
@@ -321,6 +356,10 @@ fun ConnectedBookingForm(
                                 when {
                                     !provider.offers(selectedCategory) ->
                                         "Choose an approved service."
+                                    !availabilityReady ->
+                                        "Check availability before sending your request."
+                                    conflict ->
+                                        "Choose a time outside this provider's confirmed jobs."
                                     scheduled <= System.currentTimeMillis() ->
                                         "Choose a future date and time."
                                     address.trim().length < 5 -> "Enter a complete service address."
@@ -342,7 +381,7 @@ fun ConnectedBookingForm(
                                     onCreated(booking.id)
                                 }
                         },
-                        enabled = !state.saving,
+                        enabled = !state.saving && availabilityReady && !conflict,
                         modifier = Modifier.fillMaxWidth().heightIn(min = 50.dp),
                     ) {
                         Text("Send booking request")

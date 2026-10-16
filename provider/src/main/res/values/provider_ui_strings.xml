@@ -1,4 +1,7 @@
 <resources>
+    <string name="provider_history_nav">History</string>
+    <string name="provider_request_history">Request history</string>
+    <string name="provider_request_history_detail">Review every request and its latest status.</string>
     <string name="provider_brand">fixoom</string>
     <string name="provider_brand_label">FOR PROFESSIONALS</string>
     <string name="provider_hero_eyebrow">GOOD WORK. GREAT POSSIBILITIES.</string>

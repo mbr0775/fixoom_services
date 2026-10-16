@@ -82,12 +82,8 @@ class MarketplaceViewModel : ViewModel() {
                             error = "Connection timed out. Refresh before trying again."
                         )
                 else throw cancelled
-            } catch (_: Exception) {
-                mutable.value =
-                    mutable.value.copy(
-                        error =
-                            "The request could not be saved. Check your connection, account access and the current job status."
-                    )
+            } catch (error: Exception) {
+                mutable.value = mutable.value.copy(error = marketplaceActionError(error))
             } finally {
                 mutable.value = mutable.value.copy(saving = false)
             }
@@ -187,6 +183,6 @@ class MarketplaceViewModel : ViewModel() {
     }
 
     fun dismissNotice() {
-        mutable.value = mutable.value.copy(notice = null)
+        mutable.value = mutable.value.copy(notice = null, error = null)
     }
 }

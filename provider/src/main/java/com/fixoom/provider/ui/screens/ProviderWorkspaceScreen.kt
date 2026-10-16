@@ -139,6 +139,7 @@ fun ProviderWorkspaceScreen(
                             onOpenJobRequests = { section = "requests" },
                             onOpenActiveJobs = { section = "active" },
                             onOpenSchedule = { section = "schedule" },
+                            onOpenHistory = { section = "history" },
                             onOpenEarnings = { section = "receipts" },
                             onOpenProfile = { section = "profile" },
                             onOpenNotifications = { section = "activity" },

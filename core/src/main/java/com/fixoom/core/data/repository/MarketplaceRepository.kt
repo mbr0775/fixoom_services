@@ -295,6 +295,17 @@ class MarketplaceRepository(private val client: SupabaseClient = FixoomSupabase.
         )
     }
 
+    suspend fun busyTimes(provider: String, day: String): List<BusyTime> =
+        client.postgrest
+            .rpc(
+                "provider_busy_times",
+                buildJsonObject {
+                    put("p_provider_id", provider)
+                    put("p_day", day)
+                },
+            )
+            .decodeList()
+
     suspend fun createBooking(
         key: String,
         provider: String,

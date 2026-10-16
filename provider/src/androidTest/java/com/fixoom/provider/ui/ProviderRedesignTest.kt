@@ -25,9 +25,36 @@ import org.junit.Test
 
 class ProviderRedesignTest {
     @get:Rule val compose = createComposeRule()
-    private val fixture = Profile("ui-fixture", AppRole.PROVIDER, AccountStatus.ACTIVE, "Test Professional")
+    private val fixture =
+        Profile("ui-fixture", AppRole.PROVIDER, AccountStatus.ACTIVE, "Test Professional")
 
-    @Test fun welcomeActionsRemainVisibleWithLargeTextAndScroll() {
+    @Test
+    fun historyIsReachableFromBottomNavigationAndWorkActions() {
+        var opened = 0
+        compose.setContent {
+            Fixoom_ServicesTheme {
+                ProviderDashboardScreen(
+                    fixture,
+                    true,
+                    {},
+                    {},
+                    {},
+                    {},
+                    {},
+                    {},
+                    {},
+                    {},
+                    onOpenHistory = { opened++ },
+                )
+            }
+        }
+        compose.onNodeWithTag("provider_nav_history").assertIsDisplayed().performClick()
+        compose.onNodeWithText("Request history").performScrollTo().performClick()
+        compose.runOnIdle { assertEquals(2, opened) }
+    }
+
+    @Test
+    fun welcomeActionsRemainVisibleWithLargeTextAndScroll() {
         var created = false
         var signedIn = false
         compose.setContent {
@@ -46,13 +73,24 @@ class ProviderRedesignTest {
         screenshot("welcome-large-text")
     }
 
-    @Test fun unknownAvailabilityOffersSetupAndBottomNavigationWorksInLightTheme() {
+    @Test
+    fun unknownAvailabilityOffersSetupAndBottomNavigationWorksInLightTheme() {
         var profileOpened = 0
         var scheduleOpened = 0
         compose.setContent {
             Fixoom_ServicesTheme() {
-                ProviderDashboardScreen(fixture, null, {}, {}, {}, { scheduleOpened++ }, {},
-                    { profileOpened++ }, {}, {})
+                ProviderDashboardScreen(
+                    fixture,
+                    null,
+                    {},
+                    {},
+                    {},
+                    { scheduleOpened++ },
+                    {},
+                    { profileOpened++ },
+                    {},
+                    {},
+                )
             }
         }
         screenshot("dashboard-setup-light-fixture")
@@ -61,17 +99,31 @@ class ProviderRedesignTest {
         compose.onNodeWithText("Set up").performScrollTo()
         compose.onNodeWithText("Availability not set up").assertIsDisplayed()
         compose.onNodeWithText("Set up").performClick()
-        compose.runOnIdle { assertEquals(1, scheduleOpened); assertEquals(2, profileOpened) }
+        compose.runOnIdle {
+            assertEquals(1, scheduleOpened)
+            assertEquals(2, profileOpened)
+        }
     }
 
-    @Test fun availabilityAndWorkActionsKeepTheirCallbacksInLightTheme() {
+    @Test
+    fun availabilityAndWorkActionsKeepTheirCallbacksInLightTheme() {
         var jobsOpened = false
         var earningsOpened = false
         compose.setContent {
             var available by remember { mutableStateOf(false) }
             Fixoom_ServicesTheme() {
-                ProviderDashboardScreen(fixture, available, { available = it }, { jobsOpened = true }, {}, {},
-                    { earningsOpened = true }, {}, {}, {})
+                ProviderDashboardScreen(
+                    fixture,
+                    available,
+                    { available = it },
+                    { jobsOpened = true },
+                    {},
+                    {},
+                    { earningsOpened = true },
+                    {},
+                    {},
+                    {},
+                )
             }
         }
         screenshot("dashboard-light-fixture")
@@ -83,11 +135,18 @@ class ProviderRedesignTest {
         compose.runOnIdle { assertTrue(jobsOpened && earningsOpened) }
     }
 
-    @Test fun reducedMotionHeroRendersItsContentWithoutAnimationClockAdvancement() {
+    @Test
+    fun reducedMotionHeroRendersItsContentWithoutAnimationClockAdvancement() {
         compose.mainClock.autoAdvance = false
         compose.setContent {
             Fixoom_ServicesTheme() {
-                ProviderDepthHero("Your craft.", "FIXOOM", "Your workspace", { 1000f }, motionEnabled = false)
+                ProviderDepthHero(
+                    "Your craft.",
+                    "FIXOOM",
+                    "Your workspace",
+                    { 1000f },
+                    motionEnabled = false,
+                )
             }
         }
         compose.onNodeWithText("Your craft.").assertIsDisplayed()
@@ -100,7 +159,10 @@ class ProviderRedesignTest {
         // Names are fixed test constants; no user input enters this command.
         val automation = InstrumentationRegistry.getInstrumentation().uiAutomation
         ParcelFileDescriptor.AutoCloseInputStream(
-            automation.executeShellCommand("screencap -p /data/local/tmp/fixoom-provider-$name.png")
-        ).use { it.readBytes() }
+                automation.executeShellCommand(
+                    "screencap -p /data/local/tmp/fixoom-provider-$name.png"
+                )
+            )
+            .use { it.readBytes() }
     }
 }
