@@ -1,4 +1,7 @@
 <resources>
+    <string name="provider_work_hub_eyebrow">YOUR WORK, CONNECTED</string>
+    <string name="provider_work_hub_start">START SOMETHING GREAT</string>
+    <string name="provider_work_hub_open">Review requests</string>
     <string name="provider_history_nav">History</string>
     <string name="provider_request_history">Request history</string>
     <string name="provider_request_history_detail">Review every request and its latest status.</string>

@@ -76,3 +76,11 @@ Registration submits selected service categories as untrusted pending requests. 
 ## Connected alerts and service location
 
 The light depth-style Notifications screen now reads the signed-in recipient's durable inbox and offers real Android phone-alert permission/registration. Edit profile adds explicit service-base/radius controls for nearby discovery. Active booking details expose voluntary live location sharing with a visible background notification and Stop action; completed/closed work exposes no live sharing control. The service base and live job position are separate choices, with no automatic personal location publication.
+
+## Provider home work shortcuts
+
+Keep your work moving now has a dark teal Job requests feature card with an original code-drawn 3D inbox, lime action cue and a two-column grid for Active jobs, Schedule, Request history and Earnings. Small raised tiles use original monoline icons, matching round arrow controls, quiet borders and readable descriptions. The five cards retain their actual navigation callbacks and introduce no operational counts, fictional statuses, new media assets or rendering dependencies. The provider app stays in its light theme.
+
+The section reveals once as it enters the viewport, with a short staggered lift and perspective settle. Cards and icon tiles react to press/release with a restrained spring. Lifecycle, system motion and battery settings use the existing motion policy; reduced-motion content renders immediately. Narrow content below 300 dp and text scaling of 1.3 or more switch the grid to full-width cards. Text wraps and cards grow instead of clipping.
+
+Provider debug/app-test builds passed, and eight checks passed on Honor NIC-LX2: all five shortcut callbacks, large-text stacking, reduced motion, existing dashboard navigation/availability actions and welcome/hero accessibility checks. The updated provider APK was installed preserving account data. The running home section was visually inspected on the Honor; local evidence is `Documentation/connected-workflow/work-hub-real-device.png`. Backend data, customer app and admin code were not changed.

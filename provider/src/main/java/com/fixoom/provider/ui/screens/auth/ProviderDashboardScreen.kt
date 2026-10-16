@@ -29,6 +29,7 @@ import com.fixoom.provider.R
 import com.fixoom.marketplace.ui.ProviderPhoto
 import com.fixoom.provider.ui.components.ProviderBrand
 import com.fixoom.provider.ui.components.ProviderDepthHero
+import com.fixoom.provider.ui.components.ProviderWorkHub
 import com.fixoom.provider.ui.theme.FixoomLime
 import com.fixoom.provider.ui.theme.FixoomTealDark
 
@@ -98,14 +99,7 @@ fun ProviderDashboardScreen(
                 }
             }
             AvailabilityPanel(availability, onAvailabilityChange, onOpenProfile)
-            Text(stringResource(R.string.provider_manage_work), style = MaterialTheme.typography.titleLarge)
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                WorkAction(Icons.Rounded.Handyman, R.string.provider_job_requests, R.string.provider_job_requests_detail, Color(0xFFCDEED8), onOpenJobRequests)
-                WorkAction(Icons.Rounded.WorkHistory, R.string.provider_active_jobs, R.string.provider_active_jobs_detail, Color(0xFFD9CCFF), onOpenActiveJobs)
-                WorkAction(Icons.Rounded.CalendarMonth, R.string.provider_schedule, R.string.provider_schedule_detail, Color(0xFFDDEFF3), onOpenSchedule)
-                if (onOpenHistory != null) WorkAction(Icons.Rounded.History, R.string.provider_request_history, R.string.provider_request_history_detail, Color(0xFFE1EED8), onOpenHistory)
-                WorkAction(Icons.Rounded.AccountBalanceWallet, R.string.provider_earnings, R.string.provider_earnings_detail, Color(0xFFFFE5D6), onOpenEarnings)
-            }
+            ProviderWorkHub(onOpenJobRequests, onOpenActiveJobs, onOpenSchedule, onOpenEarnings, onOpenHistory)
             Surface(color = MaterialTheme.colorScheme.surfaceVariant, shape = RoundedCornerShape(22.dp)) {
                 Column(Modifier.padding(22.dp)) {
                     Text(stringResource(R.string.provider_profile_title), style = MaterialTheme.typography.titleMedium)
@@ -173,25 +167,6 @@ private fun AvailabilityPanel(value: Boolean?, onChange: (Boolean) -> Unit, onSe
                     modifier = Modifier.minimumInteractiveComponentSize()
                         .semantics { contentDescription = availabilityLabel })
             }
-        }
-    }
-}
-
-@Composable
-private fun WorkAction(icon: ImageVector, title: Int, description: Int, accent: Color, onClick: () -> Unit) {
-    Surface(onClick = onClick, shape = RoundedCornerShape(19.dp), color = MaterialTheme.colorScheme.background) {
-        Row(Modifier.fillMaxWidth().padding(vertical = 13.dp, horizontal = 2.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(50.dp).background(accent, RoundedCornerShape(17.dp)), contentAlignment = Alignment.Center) {
-                Icon(icon, null, tint = FixoomTealDark, modifier = Modifier.size(24.dp))
-            }
-            Column(Modifier.weight(1f).padding(horizontal = 14.dp)) {
-                Text(stringResource(title), style = MaterialTheme.typography.titleSmall)
-                Spacer(Modifier.height(4.dp))
-                Text(stringResource(description), style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            Icon(Icons.AutoMirrored.Rounded.ArrowForward, null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
         }
     }
 }
