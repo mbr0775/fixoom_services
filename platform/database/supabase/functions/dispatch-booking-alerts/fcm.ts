@@ -10,6 +10,9 @@ export type PushJob = {
   recipient_id: string;
   booking_id: string;
   created_at: string;
+  kind: string;
+  title: string;
+  body: string;
 };
 type Rpc = (name: string, params?: Record<string, unknown>) => Promise<unknown>;
 const base64url = (value: Uint8Array) =>
@@ -69,14 +72,15 @@ export function messagePayload(job: PushJob) {
     message: {
       token: job.token,
       notification: {
-        title: "Fixoom booking update",
-        body: "Open Fixoom to view your request, reply or service update.",
+        title: job.title,
+        body: job.body,
       },
       data: {
         notification_id: job.notification_id,
         fixoom_booking_id: job.booking_id,
         recipient_id: job.recipient_id,
         created_at: job.created_at,
+        kind: job.kind,
       },
       android: {
         priority: "high",
@@ -85,6 +89,10 @@ export function messagePayload(job: PushJob) {
           channel_id: "fixoom_bookings",
           tag: job.notification_id,
           visibility: "PRIVATE",
+          icon: "ic_fixoom_notification",
+          defaultSound: true,
+          defaultVibrateTimings: true,
+          notificationPriority: "PRIORITY_HIGH",
         },
       },
     },
@@ -126,7 +134,7 @@ export function createDispatcher(rpc: Rpc, request: typeof fetch = fetch) {
       }
       const account = config.service_account;
       const accessToken = await googleAccessToken(account, request);
-      const jobs = await rpc("claim_booking_push", {
+      const jobs = await rpc("claim_booking_push_v2", {
         p_limit: 50,
       }) as PushJob[];
       let sent = 0;

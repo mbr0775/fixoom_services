@@ -42,6 +42,8 @@ select public.share_booking_location(current_setting('fixoom.flow.booking')::uui
 select set_config('request.jwt.claim.sub',current_setting('fixoom.flow.customer'),true);
 do $$begin
  if not exists(select 1 from public.notifications where booking_id=current_setting('fixoom.flow.booking')::uuid and kind='message' and read_at is null) then raise exception 'Customer reply notification missing';end if;
+ if not exists(select 1 from public.notifications where booking_id=current_setting('fixoom.flow.booking')::uuid and kind='message' and title='New message from Flow professional' and body like '%Plumbing%') then raise exception 'Message notification lacks actual sender/service';end if;
+ if exists(select 1 from public.notifications where booking_id=current_setting('fixoom.flow.booking')::uuid and body like '%Fixture reply for the customer%') then raise exception 'Chat content unexpectedly published in alert';end if;
  if not exists(select 1 from public.booking_locations where booking_id=current_setting('fixoom.flow.booking')::uuid) then raise exception 'Assigned customer cannot track active job';end if;
  begin perform public.share_booking_location(current_setting('fixoom.flow.booking')::uuid,6.9,79.8,10);raise exception 'Customer forged provider position';exception when insufficient_privilege then null;end;
 end$$;

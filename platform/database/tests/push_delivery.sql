@@ -33,6 +33,7 @@ select public.register_push_device(current_setting('fixoom.push.device')::uuid,'
 do $$begin
  begin perform public.push_server_config();raise exception 'User read server credentials';exception when insufficient_privilege then null;end;
  begin perform public.claim_booking_push(50);raise exception 'User claimed privileged jobs';exception when insufficient_privilege then null;end;
+ begin perform public.claim_booking_push_v2(50);raise exception 'User read privileged notification content';exception when insufficient_privilege then null;end;
  begin perform public.register_push_device(gen_random_uuid(),'isolated-other-token-never-used','customer');raise exception 'Wrong-role device accepted';exception when insufficient_privilege then null;end;
 end$$;
 select set_config('request.jwt.claim.sub',current_setting('fixoom.flow.customer'),true);
@@ -42,7 +43,12 @@ do $$begin
  if (select count(*) from private.push_outbox o join public.notifications n on n.id=o.notification_id where n.booking_id=current_setting('fixoom.flow.booking')::uuid)<>1 then raise exception 'Recipient device push missing or sender notified';end if;
 end$$;
 set local role service_role;
-select set_config('fixoom.push.dispatch',(select dispatch_id::text from public.claim_booking_push(100) where booking_id=current_setting('fixoom.flow.booking')::uuid),true);
+do $$declare job record;begin
+ select * into job from public.claim_booking_push_v2(100) where booking_id=current_setting('fixoom.flow.booking')::uuid;
+ if job.title is distinct from 'New service request' or job.body not like 'Flow customer requested Plumbing%' or job.kind is distinct from 'requested' then raise exception 'Detailed push content missing';end if;
+ if job.body like '%Test service address%' or job.body like '%@example.invalid%' then raise exception 'Push exposes private contact/address';end if;
+ perform set_config('fixoom.push.dispatch',job.dispatch_id::text,true);
+end$$;
 select public.finish_booking_push(current_setting('fixoom.push.dispatch')::uuid,false,'isolated_transient_failure',false);
 reset role;
 do $$begin

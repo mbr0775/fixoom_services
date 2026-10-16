@@ -10,6 +10,9 @@ const job: PushJob = {
   recipient_id: "recipient-fixture",
   booking_id: "booking-fixture",
   created_at: "2026-10-16T10:00:00Z",
+  kind: "requested",
+  title: "New service request",
+  body: "Fixture customer requested Plumbing · FX-ISOLATED-1",
 };
 Deno.test("unauthenticated dispatcher cannot read config or claim jobs", async () => {
   let reads = 0;
@@ -26,7 +29,7 @@ Deno.test("unauthenticated dispatcher cannot read config or claim jobs", async (
 Deno.test("missing FCM credentials cannot report delivery success", async () => {
   let claims = 0;
   const handler = createDispatcher(async (name) => {
-    if (name === "claim_booking_push") claims++;
+    if (name === "claim_booking_push_v2") claims++;
     return { dispatch_key: key };
   });
   const response = await handler(
@@ -38,11 +41,16 @@ Deno.test("missing FCM credentials cannot report delivery success", async () => 
   assert(response.status === 503);
   assert(claims === 0);
 });
-Deno.test("notification payload is generic and routes only to its protected booking", () => {
+Deno.test("notification carries the real inbox event and routes only to its protected booking", () => {
   const payload = messagePayload(job).message;
   assert(payload.data.fixoom_booking_id === job.booking_id);
   assert(payload.data.recipient_id === job.recipient_id);
   assert(payload.android.notification.tag === job.notification_id);
+  assert(payload.notification.title === job.title);
+  assert(payload.notification.body === job.body);
+  assert(payload.data.kind === "requested");
+  assert(payload.android.notification.defaultSound);
+  assert(payload.android.notification.icon === "ic_fixoom_notification");
   assert(!JSON.stringify(payload.notification).includes("recipient-fixture"));
 });
 Deno.test("OAuth assertion is signed; unregistered devices are retired without a fake success", async () => {
@@ -74,7 +82,7 @@ Deno.test("OAuth assertion is signed; unregistered devices are retired without a
     if (name === "push_server_config") {
       return { dispatch_key: key, service_account: account };
     }
-    if (name === "claim_booking_push") return [job];
+    if (name === "claim_booking_push_v2") return [job];
     if (name === "finish_booking_push") {
       finished = params;
       return null;
@@ -107,6 +115,11 @@ Deno.test("OAuth assertion is signed; unregistered devices are retired without a
       assert(
         String(url) ===
           "https://fcm.googleapis.com/v1/projects/isolated-project/messages:send",
+      );
+      const payload = JSON.parse(options!.body as string).message;
+      assert(
+        payload.notification.title === job.title &&
+          payload.notification.body === job.body,
       );
       return Response.json({
         error: { details: [{ errorCode: "UNREGISTERED" }] },
