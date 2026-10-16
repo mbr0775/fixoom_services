@@ -3,10 +3,22 @@ package com.fixoom.provider.ui
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.media.ExifInterface
+import androidx.activity.compose.LocalActivityResultRegistryOwner
+import androidx.activity.result.ActivityResultRegistry
+import androidx.activity.result.ActivityResultRegistryOwner
+import androidx.activity.result.contract.ActivityResultContract
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.core.app.ActivityOptionsCompat
 import com.fixoom.marketplace.ui.ProviderPhotoCropper
 import com.fixoom.marketplace.ui.ProviderPhotoEditor
 import com.fixoom.marketplace.ui.prepareProviderPhoto
@@ -130,6 +142,166 @@ class ProviderPhotoTest {
             decoded.recycle()
             source.recycle()
         }
+    }
+
+    @Test
+    fun gallerySelectionRequiresCropAndCanBeAdjustedAgainBeforeUpload() {
+        var saved: ByteArray? = null
+        var saves = 0
+        val fixture = showEditorWithPhotoResult { bytes, done ->
+            saved = bytes
+            saves++
+            done()
+        }
+        try {
+            compose.onNodeWithText("Add photo").performClick()
+            compose.onNodeWithText("Choose from gallery").performClick()
+            compose.waitUntil(10_000) {
+                compose
+                    .onAllNodesWithContentDescription("Photo zoom")
+                    .fetchSemanticsNodes()
+                    .isNotEmpty()
+            }
+            compose.onNodeWithContentDescription("Profile photo crop preview").assertIsDisplayed()
+            compose.onNodeWithText("Save photo").assertDoesNotExist()
+            compose.runOnIdle { assertEquals(0, saves) }
+            compose.onNodeWithText("Use photo").performClick()
+            compose.waitUntil(10_000) {
+                compose.onAllNodesWithText("Adjust crop").fetchSemanticsNodes().isNotEmpty()
+            }
+            compose.onNodeWithText("Adjust crop").performScrollTo()
+            compose.waitForIdle()
+            val automation =
+                androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().uiAutomation
+            android.os.ParcelFileDescriptor.AutoCloseInputStream(
+                    automation.executeShellCommand(
+                        "screencap -p /data/local/tmp/fixoom-adjust-crop-preview.png"
+                    )
+                )
+                .use { it.readBytes() }
+            compose.onNodeWithText("Adjust crop").performClick()
+            compose
+                .onNodeWithContentDescription("Photo zoom")
+                .performScrollTo()
+                .performSemanticsAction(SemanticsActions.SetProgress) { it(2f) }
+            compose
+                .onNodeWithContentDescription("Profile photo crop preview")
+                .performScrollTo()
+                .performTouchInput {
+                    swipe(
+                        Offset(width * .85f, center.y),
+                        Offset(width * .15f, center.y),
+                        400,
+                    )
+                }
+            compose.onNodeWithText("Use photo").performClick()
+            compose.waitUntil(10_000) {
+                compose.onAllNodesWithText("Save photo").fetchSemanticsNodes().isNotEmpty()
+            }
+            compose.runOnIdle { assertEquals(0, saves) }
+            compose.onNodeWithText("Save photo").performScrollTo().performClick()
+            compose.runOnIdle {
+                assertEquals(1, saves)
+                val bytes = requireNotNull(saved)
+                val image = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                val pixel = image.getPixel(image.width / 2, image.height / 2)
+                assertTrue(
+                    "Saved image must use the adjusted right-hand crop",
+                    android.graphics.Color.green(pixel) > 200,
+                )
+                assertTrue(android.graphics.Color.red(pixel) < 50)
+                image.recycle()
+            }
+            compose.onNodeWithText("Adjust crop").assertDoesNotExist()
+        } finally {
+            fixture.delete()
+        }
+    }
+
+    @Test
+    fun cameraSelectionRequiresCropAndCancellingDoesNotUpload() {
+        var saves = 0
+        val fixture = showEditorWithPhotoResult { _, _ -> saves++ }
+        try {
+            compose.onNodeWithText("Add photo").performClick()
+            compose.onNodeWithText("Take photo").performClick()
+            compose.waitUntil(10_000) {
+                compose
+                    .onAllNodesWithContentDescription("Photo zoom")
+                    .fetchSemanticsNodes()
+                    .isNotEmpty()
+            }
+            compose.onNodeWithContentDescription("Profile photo crop preview").assertIsDisplayed()
+            compose.onNodeWithText("Save photo").assertDoesNotExist()
+            compose.onNodeWithText("Cancel").performClick()
+            compose.onNodeWithText("Save photo").assertDoesNotExist()
+            compose.onNodeWithText("Adjust crop").assertDoesNotExist()
+            compose.runOnIdle { assertEquals(0, saves) }
+        } finally {
+            fixture.delete()
+        }
+    }
+
+    // Activity results and save callbacks are isolated fixtures; no real gallery, camera or backend
+    // writes.
+    private fun showEditorWithPhotoResult(onSave: (ByteArray?, () -> Unit) -> Unit): java.io.File {
+        val context =
+            androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().targetContext
+        val folder = java.io.File(context.cacheDir, "profile-camera").apply { mkdirs() }
+        val file = java.io.File(folder, "fixture-${java.util.UUID.randomUUID()}.jpg")
+        val bitmap = Bitmap.createBitmap(1200, 600, Bitmap.Config.ARGB_8888)
+        android.graphics.Canvas(bitmap).apply {
+            drawColor(android.graphics.Color.RED)
+            drawRect(
+                600f,
+                0f,
+                1200f,
+                600f,
+                android.graphics.Paint().apply { color = android.graphics.Color.GREEN },
+            )
+        }
+        file.outputStream().use { bitmap.compress(Bitmap.CompressFormat.JPEG, 95, it) }
+        bitmap.recycle()
+        val owner =
+            object : ActivityResultRegistryOwner {
+                override val activityResultRegistry =
+                    object : ActivityResultRegistry() {
+                        override fun <I, O> onLaunch(
+                            requestCode: Int,
+                            contract: ActivityResultContract<I, O>,
+                            input: I,
+                            options: ActivityOptionsCompat?,
+                        ) {
+                            if (contract is ActivityResultContracts.TakePicture) {
+                                context.contentResolver
+                                    .openOutputStream(input as android.net.Uri)!!
+                                    .use { output ->
+                                        file.inputStream().use { it.copyTo(output) }
+                                    }
+                                dispatchResult(requestCode, true)
+                            } else {
+                                dispatchResult(
+                                    requestCode,
+                                    androidx.core.content.FileProvider.getUriForFile(
+                                        context,
+                                        "${context.packageName}.profilephotos",
+                                        file,
+                                    ),
+                                )
+                            }
+                        }
+                    }
+            }
+        compose.setContent {
+            CompositionLocalProvider(LocalActivityResultRegistryOwner provides owner) {
+                Fixoom_ServicesTheme {
+                    Column(Modifier.verticalScroll(rememberScrollState())) {
+                        ProviderPhotoEditor(null, "Photo test", false, onSave)
+                    }
+                }
+            }
+        }
+        return file
     }
 
     @Test

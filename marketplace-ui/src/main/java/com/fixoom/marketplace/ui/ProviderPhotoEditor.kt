@@ -7,8 +7,10 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
@@ -44,6 +46,7 @@ fun ProviderPhotoEditor(
     val scope = rememberCoroutineScope()
     var draft by remember { mutableStateOf<ByteArray?>(null) }
     var source by remember { mutableStateOf<Bitmap?>(null) }
+    var draftSource by remember { mutableStateOf<Bitmap?>(null) }
     var reading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var options by rememberSaveable { mutableStateOf(false) }
@@ -157,7 +160,7 @@ fun ProviderPhotoEditor(
                 Text(if (path == null && draft == null) "Add photo" else "Edit photo")
             }
             Text(
-                "A clear photo helps customers recognize you.",
+                "Choose a photo, then crop and adjust it before saving.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
@@ -168,11 +171,32 @@ fun ProviderPhotoEditor(
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary,
                 )
+                OutlinedButton({ source = draftSource }, enabled = enabled && draftSource != null) {
+                    Icon(Icons.Rounded.Crop, null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Adjust crop")
+                }
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Button({ onSave(draft) { draft = null } }, enabled = enabled) {
+                    Button(
+                        {
+                            onSave(draft) {
+                                draft = null
+                                draftSource = null
+                            }
+                        },
+                        enabled = enabled,
+                    ) {
                         Text(if (busy) "Saving…" else "Save photo")
                     }
-                    TextButton({ draft = null }, enabled = enabled) { Text("Discard") }
+                    TextButton(
+                        {
+                            draft = null
+                            draftSource = null
+                        },
+                        enabled = enabled,
+                    ) {
+                        Text("Discard")
+                    }
                 }
             } else if (busy || reading)
                 Text(
@@ -191,10 +215,14 @@ fun ProviderPhotoEditor(
     if (options)
         ModalBottomSheet(
             onDismissRequest = { options = false },
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
             containerColor = MaterialTheme.colorScheme.surface,
         ) {
             Column(
-                Modifier.fillMaxWidth().padding(horizontal = 20.dp).navigationBarsPadding(),
+                Modifier.fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 20.dp)
+                    .navigationBarsPadding(),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 Text(
@@ -261,6 +289,7 @@ fun ProviderPhotoEditor(
     source?.let { bitmap ->
         ProviderPhotoCropper(bitmap, { source = null }) { bytes ->
             draft = bytes
+            draftSource = bitmap
             source = null
         }
     }
@@ -294,7 +323,10 @@ fun ProviderPhotoEditor(
                 TextButton(
                     {
                         removing = false
-                        onSave(null) { draft = null }
+                        onSave(null) {
+                            draft = null
+                            draftSource = null
+                        }
                     },
                     enabled = !busy,
                 ) {
