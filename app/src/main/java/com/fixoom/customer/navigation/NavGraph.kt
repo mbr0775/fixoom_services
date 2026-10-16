@@ -3,7 +3,9 @@ package com.fixoom.customer.navigation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
@@ -12,6 +14,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.fixoom.core.data.repository.MarketplaceViewModel
+import com.fixoom.core.model.DiscoveryPoint
+import com.fixoom.customer.data.location.LocationPreferences
+import com.fixoom.customer.data.location.SavedLocation
 import com.fixoom.customer.ui.screens.ExploreScreen
 import com.fixoom.customer.ui.screens.HomeScreen
 import com.fixoom.customer.ui.screens.ProfileScreen
@@ -24,9 +29,23 @@ fun NavGraph(
     isDarkMode: Boolean = false,
     onDarkModeChange: (Boolean) -> Unit = {},
     authReturn: Int = 0,
+    notificationBooking: String? = null,
+    onNotificationConsumed: () -> Unit = {},
 ) {
     val market: MarketplaceViewModel = viewModel()
     val state by market.state.collectAsStateWithLifecycle()
+    val appContext = LocalContext.current.applicationContext
+    val locationStore = remember(appContext) { LocationPreferences(appContext) }
+    val savedLocation by
+        locationStore.savedLocation.collectAsStateWithLifecycle(initialValue = SavedLocation())
+    LaunchedEffect(savedLocation) {
+        val point = savedLocation.selection
+        market.setDiscoveryPoint(
+            if (savedLocation.automatic && point?.latitude != null && point.longitude != null)
+                DiscoveryPoint(point.latitude, point.longitude)
+            else null
+        )
+    }
     ObserveMarketplace(market)
     val openBooking: (String) -> Unit = {
         navController.navigate(Screen.BookingDetails.createRoute(it))
@@ -40,6 +59,14 @@ fun NavGraph(
                 popUpTo(Screen.Home.route)
                 launchSingleTop = true
             }
+        }
+    }
+    LaunchedEffect(notificationBooking, state.data.profile?.id, state.loading) {
+        if (notificationBooking != null && !state.loading) {
+            if (state.data.profile != null) {
+                openBooking(notificationBooking)
+                onNotificationConsumed()
+            } else navController.navigate("account") { launchSingleTop = true }
         }
     }
     NavHost(navController, Screen.Home.route, modifier) {
@@ -82,13 +109,7 @@ fun NavGraph(
             )
         }
         composable(Screen.Alerts.route) {
-            ConnectedBookings(
-                market,
-                mode = "activity",
-                onOpen = openBooking,
-                onAccount = openAccount,
-                onBack = back,
-            )
+            ConnectedNotifications(market, openBooking, openAccount, back)
         }
         composable("account") { ConnectedAccount(market, back) }
         composable(Screen.Profile.route) {

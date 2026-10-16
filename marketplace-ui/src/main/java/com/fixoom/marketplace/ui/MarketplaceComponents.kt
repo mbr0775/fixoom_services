@@ -12,14 +12,21 @@ import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
+import com.fixoom.core.data.notifications.BookingAlerts
+import com.fixoom.core.data.remote.FixoomSupabase
+import com.fixoom.core.data.repository.MarketplaceRepository
 import com.fixoom.core.data.repository.MarketplaceState
 import com.fixoom.core.data.repository.MarketplaceViewModel
 import com.fixoom.core.model.*
+import io.github.jan.supabase.auth.auth
+import kotlinx.coroutines.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 
@@ -27,14 +34,30 @@ import kotlinx.coroutines.isActive
 fun ObserveMarketplace(vm: MarketplaceViewModel) = ObserveServiceUpdates { vm.refresh() }
 
 @Composable
-fun ObserveServiceUpdates(refresh: () -> Unit) {
+fun ObserveServiceUpdates(bookingId: String? = null, refresh: () -> Unit) {
     val owner = LocalLifecycleOwner.current
+    val context = LocalContext.current.applicationContext
+    val auth by FixoomSupabase.client.auth.sessionStatus.collectAsStateWithLifecycle()
     val latest by rememberUpdatedState(refresh)
-    LaunchedEffect(owner) {
+    LaunchedEffect(owner, auth, bookingId) {
         owner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
-            while (isActive) {
-                latest()
-                delay(12_000)
+            supervisorScope {
+                launch {
+                    try {
+                        MarketplaceRepository().updates(bookingId).collect { notification ->
+                            latest()
+                            notification?.let { BookingAlerts.show(context, it) }
+                        }
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (_: Exception) {
+                        /* The bounded refresh loop remains the recovery path. */
+                    }
+                }
+                while (isActive) {
+                    latest()
+                    delay(30_000)
+                }
             }
         }
     }
@@ -191,6 +214,12 @@ fun ProfessionalSummary(professional: ServiceProfessional, category: String, onO
                 fontWeight = FontWeight.SemiBold,
             )
             Text(professional.serviceArea, style = MaterialTheme.typography.bodyMedium)
+            professional.distanceKm?.let {
+                Text(
+                    "About ${it} km away / straight-line distance",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
             Text(
                 "Available for requests",
                 style = MaterialTheme.typography.labelMedium,

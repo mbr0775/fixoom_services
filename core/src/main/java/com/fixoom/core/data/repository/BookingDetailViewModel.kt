@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.fixoom.core.model.*
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,6 +18,7 @@ data class BookingDetailState(
     val messages: List<BookingMessage> = emptyList(),
     val loading: Boolean = true,
     val error: String? = null,
+    val location: JobLocation? = null,
 )
 
 class BookingDetailViewModel : ViewModel() {
@@ -25,8 +27,14 @@ class BookingDetailViewModel : ViewModel() {
     val state = mutable.asStateFlow()
     private var id: String? = null
     private var loading = false
+    private var request: Job? = null
 
     fun open(value: String) {
+        if (id != value) {
+            request?.cancel()
+            loading = false
+            mutable.value = BookingDetailState()
+        }
         id = value
         refresh()
     }
@@ -35,7 +43,7 @@ class BookingDetailViewModel : ViewModel() {
         val key = id ?: return
         if (loading) return
         loading = true
-        viewModelScope.launch {
+        request = viewModelScope.launch {
             try {
                 val next =
                     withTimeout(15_000) {
@@ -43,31 +51,35 @@ class BookingDetailViewModel : ViewModel() {
                             val booking = async { repository.booking(key) }
                             val events = async { repository.events(key) }
                             val messages = async { repository.messages(key) }
+                            val location = async { repository.jobLocation(key) }
                             BookingDetailState(
                                 booking.await(),
                                 events.await(),
                                 messages.await(),
                                 false,
+                                location = location.await(),
                             )
                         }
                     }
-                mutable.value = next
+                if (id == key) mutable.value = next
             } catch (cancelled: CancellationException) {
                 if (cancelled !is kotlinx.coroutines.TimeoutCancellationException) throw cancelled
-                mutable.value =
-                    mutable.value.copy(
-                        loading = false,
-                        error = "Connection timed out. Please refresh.",
-                    )
+                if (id == key)
+                    mutable.value =
+                        mutable.value.copy(
+                            loading = false,
+                            error = "Connection timed out. Please refresh.",
+                        )
             } catch (_: Exception) {
-                mutable.value =
-                    mutable.value.copy(
-                        loading = false,
-                        error =
-                            "Unable to refresh this booking. Check your connection and account access.",
-                    )
+                if (id == key)
+                    mutable.value =
+                        mutable.value.copy(
+                            loading = false,
+                            error =
+                                "Unable to refresh this booking. Check your connection and account access.",
+                        )
             } finally {
-                loading = false
+                if (id == key) loading = false
             }
         }
     }

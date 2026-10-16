@@ -14,6 +14,7 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -31,11 +32,23 @@ import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     private var authReturn by mutableIntStateOf(0)
+    private var notificationBooking by mutableStateOf<String?>(null)
+
+    private fun readNotification(incoming: Intent) {
+        incoming
+            .getStringExtra("fixoom_booking_id")
+            ?.takeIf { runCatching { java.util.UUID.fromString(it) }.isSuccess }
+            ?.let {
+                notificationBooking = it
+                incoming.removeExtra("fixoom_booking_id")
+            }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         enableEdgeToEdge()
+        readNotification(intent)
         processAuthenticationLink(intent)
 
         val themePreferences = ThemePreferences(applicationContext)
@@ -55,6 +68,8 @@ class MainActivity : ComponentActivity() {
             Fixoom_ServicesTheme(darkTheme = isDarkMode) {
                 FixoomApp(
                     authReturn = authReturn,
+                    notificationBooking = notificationBooking,
+                    onNotificationConsumed = { notificationBooking = null },
                     isDarkMode = isDarkMode,
                     onDarkModeChange = { enabled ->
                         coroutineScope.launch {
@@ -69,6 +84,7 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        readNotification(intent)
         processAuthenticationLink(intent)
     }
 
@@ -107,6 +123,8 @@ fun FixoomApp(
     isDarkMode: Boolean,
     onDarkModeChange: (Boolean) -> Unit,
     authReturn: Int = 0,
+    notificationBooking: String? = null,
+    onNotificationConsumed: () -> Unit = {},
 ) {
     val navController = rememberNavController()
 
@@ -118,6 +136,8 @@ fun FixoomApp(
     ) { innerPadding ->
         NavGraph(
             authReturn = authReturn,
+            notificationBooking = notificationBooking,
+            onNotificationConsumed = onNotificationConsumed,
             navController = navController,
             modifier = Modifier.padding(innerPadding),
             isDarkMode = isDarkMode,

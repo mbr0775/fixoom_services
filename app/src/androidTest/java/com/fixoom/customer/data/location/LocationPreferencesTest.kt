@@ -25,9 +25,9 @@ import org.junit.runner.RunWith
 // real persistence on Android rather than File.renameTo on a Windows host.
 @RunWith(AndroidJUnit4::class)
 class LocationPreferencesTest {
-    @get:Rule val temporaryFolder = TemporaryFolder(
-        InstrumentationRegistry.getInstrumentation().targetContext.cacheDir
-    )
+    @get:Rule
+    val temporaryFolder =
+        TemporaryFolder(InstrumentationRegistry.getInstrumentation().targetContext.cacheDir)
     private var storeJob = SupervisorJob()
     private lateinit var preferences: LocationPreferences
     private lateinit var file: File
@@ -38,15 +38,15 @@ class LocationPreferencesTest {
         preferences = newPreferences()
     }
 
-    private fun newPreferences() = LocationPreferences(
-        PreferenceDataStoreFactory.create(
-            scope = CoroutineScope(Dispatchers.IO + storeJob),
-            produceFile = { file }
+    private fun newPreferences() =
+        LocationPreferences(
+            PreferenceDataStoreFactory.create(
+                scope = CoroutineScope(Dispatchers.IO + storeJob),
+                produceFile = { file },
+            )
         )
-    )
 
-    @After
-    fun closeStore() = runBlocking { storeJob.cancelAndJoin() }
+    @After fun closeStore() = runBlocking { storeJob.cancelAndJoin() }
 
     @Test
     fun freshInstallDoesNotInventALocationOrEnableGps() = runBlocking {
@@ -117,6 +117,21 @@ class LocationPreferencesTest {
         val result = runCatching { preferences.selectManual("   ") }
         assertTrue(result.exceptionOrNull() is IllegalArgumentException)
         assertEquals("Kandy, Sri Lanka", preferences.savedLocation.first().selection?.label)
+    }
+
+    @Test
+    fun coordinatesRequireOptInPersistLocallyAndAreClearedByManualChoice() = runBlocking {
+        preferences.saveDetected("Test area", 6.9271, 79.8612)
+        assertNull(preferences.savedLocation.first().selection)
+        preferences.enableAutomatic()
+        preferences.saveDetected("Test area", 6.9271, 79.8612)
+        storeJob.cancelAndJoin()
+        storeJob = SupervisorJob()
+        preferences = newPreferences()
+        assertEquals(6.9271, preferences.savedLocation.first().selection!!.latitude!!, 0.000001)
+        preferences.selectManual("Manual area")
+        assertNull(preferences.savedLocation.first().selection!!.latitude)
+        assertNull(preferences.savedLocation.first().selection!!.longitude)
     }
 
     @Test

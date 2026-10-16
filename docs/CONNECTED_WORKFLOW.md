@@ -59,7 +59,7 @@ Local evidence is under `Documentation/connected-workflow`. Screenshots labelled
 
 ## Remaining public-release work
 
-The connected development workflow is verified. Public release still requires published Terms/Privacy, signed releases and store setup, customer password recovery and any desired background push, media attachments, rescheduling or refund features. An online payment gateway is outside the chosen direct-payment workflow.
+The connected development workflow is verified. Public release still requires published Terms/Privacy, signed releases and store setup, customer password recovery and any desired media attachments, rescheduling or refund features. Background push is implemented below; real opted-in delivery still needs device confirmation. An online payment gateway is outside the chosen direct-payment workflow.
 
 Vercel hosting has not been verified: the connector cannot access the previously specified team, and searching the currently accessible projects for Fixoom returns none. No production admin URL is claimed. Connect an authorized Vercel team/project to `mbr0775/fixoom_admin` to publish it with the configured environment variables.
 
@@ -97,3 +97,31 @@ The provider app keeps its light theme and extends the existing depth design wit
 Validation: both debug APKs and all 50 unit tests passed. All 21 provider UI checks and both customer directory checks passed on Honor NIC-LX2 (including multi-select registration, offering validation/removal confirmation and discovery by an approved secondary skill). All six SQL policy suites passed with rolled-back fixtures. Admin build/TypeScript/lint and browser checks passed, including skill-review confirmation, failed-write recovery, no idle/focus refresh and responsive widths of 1440/1024/390/360. Updated customer and provider APKs were installed with accounts retained. No fictional provider or operational demo data was added.
 
 The migration is applied to shared project `mzkrxovluljvsqzbowwb` and mirrored in both local database folders. Vercel project inspection still returns 403 for the previously specified team, so this update's hosted admin deployment is not verified. Publishing source to GitHub does not itself prove a Vercel deployment succeeded.
+
+
+## Booking alerts, nearby search and optional live tracking — October 16, 2026
+
+Bookings and participant replies now create a durable, recipient-only Supabase notification inbox. Realtime updates refresh the open Android apps; a 30-second foreground recovery refresh handles missed connections. Notification taps open the protected booking. A customer cannot read another customer's job, messages or position. The admin retains explicit refresh; no interval/focus reload was added.
+
+Firebase project `fixoom-services-live-077-519b8` (display name `fixoom-services-live-0775`) supplies Android push only. Customer package `com.fixoom.customer` and provider package `com.fixoom.provider` are registered. Supabase `mzkrxovluljvsqzbowwb` remains the only business database and authentication service. The Google account used for this Firebase setup is `fizoomservices@gmail.com`; this does not change the official Fixoom contact or Supabase account.
+
+The deployed `dispatch-booking-alerts` Edge Function authenticates a server-only dispatch key, claims recipient/device jobs, signs an FCM HTTP v1 OAuth assertion and records actual delivery acceptance or retry/failure. A dedicated FCM-only service account is encrypted in Supabase Vault as `fixoom_fcm_service_account`; `fixoom_push_dispatch_key` is also encrypted. Neither credential is stored in client code or Git. The private outbox retries network errors with backoff and retires invalid tokens. Post-commit dispatch plus the `fixoom-booking-push-retry` cron job work without a running mobile app. Success means Google accepted a send, not proof a phone displayed it. Notifications contain generic text; opening the job still requires its authorized session.
+
+On each phone, sign in to the matching app and open Notifications → Allow phone notifications. Device registrations are tied to the authenticated role and installation; sign-out unregisters/deletes the token best-effort, account changes replace the old registration, and foreground message handling verifies the recipient. OS permission, channel settings, connectivity and device battery restrictions can affect display. The sender's live authenticated configuration check returned HTTP 200 with no queued jobs; actual background device delivery remains unverified until a real opted-in booking/reply is sent and observed.
+
+For nearby discovery, the provider opens Profile → Edit profile → Where you offer services, chooses a radius, and explicitly saves the current location as the real service base. Exact base coordinates remain provider/admin-only. Customers use GPS in the Home location picker to discover active, available, approved providers within 50 km who cover that point. Results show approximate straight-line distance and require a saved provider base. Manual location selection clears stored GPS discovery coordinates and returns the approved directory; it does not pretend to calculate proximity. No eligible providers means an empty state.
+
+For an accepted/in-progress booking, the assigned provider may tap Share live location for this job. It requests foreground location access and starts a visible location foreground service with a Stop action. Fresh positions publish approximately every 15 seconds while available, including when the app is backgrounded. The customer opens the reported point in the phone's map app. This is a position/status workflow, with no invented ETA or road route. Sharing is voluntary, stops on closure/session/access failure, and can be stopped manually. Failed cleanup/process death can leave the last point until its five-minute server expiry. Only the participants and authorized administrator can read active, fresh points. The admin uses Refresh booking to inspect them.
+
+The three migrations and rollback-only tests are in `platform/database`. All eight SQL suites passed after deployment, as did four isolated Deno sender tests. Both Firebase-configured debug APKs built, all 50 unit tests passed, and the updated apps were installed on Honor without clearing accounts. All 11 targeted provider and 12 customer device UI checks passed, along with admin production build/lint and browser checks at four widths. Android UI and browser evidence is local under `Documentation/connected-workflow`; fixtures stay isolated and are not operational data. Security advisor reports deliberate deny-by-default RLS on the two private push tables and the existing disabled leaked-password protection warning. Performance advisor reports existing overlapping policies and unused-index monitoring items.
+
+### Firebase configuration on another build machine
+
+The local module `google-services.json` files are ignored. Download them from the two registered Firebase Android apps, or use an authorized Firebase CLI:
+
+```powershell
+firebase apps:sdkconfig ANDROID 1:1050059272045:android:2ab301b20c3a70d610b464 --project fixoom-services-live-077-519b8 --out app/google-services.json
+firebase apps:sdkconfig ANDROID 1:1050059272045:android:d5da4b11a8430a0310b464 --project fixoom-services-live-077-519b8 --out provider/google-services.json
+```
+
+Debug builds without those files show an honest unconfigured-phone-alert state. Release builds require the matching configuration. Never copy a service-account credential into either module. The current live sender credentials are already encrypted in Vault; rotate them through the authorized server administration workflow when needed.

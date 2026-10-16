@@ -24,6 +24,7 @@ data class ServiceProfessional(
     @SerialName("is_available") val isAvailable: Boolean = false,
     @SerialName("avatar_path") val avatarPath: String? = null,
     @SerialName("approved_categories") val approvedCategories: List<String> = emptyList(),
+    @SerialName("distance_km") val distanceKm: Double? = null,
     @SerialName("provider_skills") val skills: List<ProviderSkill> = emptyList(),
 ) {
     fun offers(category: String) = category in approvedCategories
@@ -91,3 +92,32 @@ fun serviceTime(value: String): String = runCatching {
     .getOrDefault(value)
 
 fun serviceStatus(value: String) = value.replace('_', ' ').replaceFirstChar { it.uppercaseChar() }
+
+@Serializable
+data class BookingNotification(
+    val id: String,
+    @SerialName("booking_id") val bookingId: String,
+    val kind: String,
+    val title: String,
+    val body: String,
+    @SerialName("created_at") val createdAt: String,
+    @SerialName("read_at") val readAt: String? = null,
+)
+
+@Serializable
+data class ServiceLocation(
+    val latitude: Double,
+    val longitude: Double,
+    @SerialName("radius_km") val radiusKm: Int = 25,
+)
+
+@Serializable
+data class JobLocation(
+    @SerialName("booking_id") val bookingId: String,
+    val latitude: Double,
+    val longitude: Double,
+    @SerialName("accuracy_m") val accuracyM: Double,
+    @SerialName("updated_at") val updatedAt: String,
+)
+
+data class DiscoveryPoint(val latitude: Double, val longitude: Double)

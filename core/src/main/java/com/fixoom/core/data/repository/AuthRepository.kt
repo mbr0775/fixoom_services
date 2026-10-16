@@ -254,6 +254,7 @@ class AuthRepository(private val client: SupabaseClient = FixoomSupabase.client)
 
     suspend fun signOut(): AuthResult {
         return try {
+            com.fixoom.core.data.notifications.PushMessaging.beforeSignOut()
             client.auth.signOut()
             AuthResult.SignedOut
         } catch (exception: CancellationException) {
@@ -354,6 +355,7 @@ class AuthRepository(private val client: SupabaseClient = FixoomSupabase.client)
 
     private suspend fun clearCurrentSession() {
         try {
+            com.fixoom.core.data.notifications.PushMessaging.beforeSignOut()
             client.auth.signOut()
         } catch (exception: CancellationException) {
             throw exception

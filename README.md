@@ -93,3 +93,7 @@ The provider My profile screen now has a portrait header with scroll-driven 3D p
 Providers select multiple service skills at signup and submit an experience/offering description for each in Profile → Skills & services. The administrator must approve the account and each offering separately. Admin → Providers now includes a paginated Skills & offerings queue, with approve/reject/suspend decisions and audit history. Customers discover/book only approved active services, selecting the category and reserved duration; the backend prevents overlapping accepted work across the provider's skills. Existing published services are preserved and no demo professionals are created.
 
 See [the connected workflow](docs/CONNECTED_WORKFLOW.md#multiple-skills-and-separate-service-approvals--october-16-2026) for usage, checks and deployment limits. All apps continue to share Supabase project `mzkrxovluljvsqzbowwb`.
+
+## Connected booking notifications and location
+
+Both Android apps now include recipient inboxes and Firebase phone-alert registration, real nearby discovery from opt-in service bases, and voluntary location sharing during active jobs. Firebase is used only for push; Supabase remains the shared database/auth service. See [the connected workflow](docs/CONNECTED_WORKFLOW.md#booking-alerts-nearby-search-and-optional-live-tracking--october-16-2026) for phone setup, private credential handling, build configuration and the exact verification limits.

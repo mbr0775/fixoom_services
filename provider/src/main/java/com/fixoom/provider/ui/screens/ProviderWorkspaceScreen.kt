@@ -7,8 +7,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.fixoom.core.data.location.JobLocationSharing
 import com.fixoom.core.data.repository.MarketplaceViewModel
 import com.fixoom.core.model.AccountStatus
 import com.fixoom.marketplace.ui.*
@@ -17,12 +19,24 @@ import com.fixoom.provider.ui.components.rememberProviderMotionAllowed
 import com.fixoom.provider.ui.screens.dashboard.ProviderDashboardScreen
 
 @Composable
-fun ProviderWorkspaceScreen(auth: ProviderAuthViewModel, pending: Boolean = false) {
+fun ProviderWorkspaceScreen(
+    auth: ProviderAuthViewModel,
+    pending: Boolean = false,
+    notificationBooking: String? = null,
+    onNotificationConsumed: () -> Unit = {},
+) {
+    val appContext = LocalContext.current.applicationContext
     val market: MarketplaceViewModel = viewModel()
     val state by market.state.collectAsStateWithLifecycle()
     val approval by auth.approvalStatus.collectAsStateWithLifecycle()
     var section by rememberSaveable { mutableStateOf(if (pending) "profile" else "home") }
     var selectedBooking by rememberSaveable { mutableStateOf<String?>(null) }
+    LaunchedEffect(notificationBooking) {
+        if (!pending && notificationBooking != null) {
+            selectedBooking = notificationBooking
+            onNotificationConsumed()
+        }
+    }
     ObserveMarketplace(market)
     LaunchedEffect(state.data.profile?.accountStatus) {
         val status = state.data.profile?.accountStatus
@@ -71,10 +85,20 @@ fun ProviderWorkspaceScreen(auth: ProviderAuthViewModel, pending: Boolean = fals
                         pending,
                         home,
                         auth::checkApprovalStatus,
-                        auth::signOut,
+                        {
+                            JobLocationSharing.stop(appContext)
+                            auth.signOut()
+                        },
                         checkingApproval = approval.checking,
                         approvalMessage = approval.message,
                         approvalError = approval.error,
+                    )
+                destination == "activity" ->
+                    ConnectedNotifications(
+                        market,
+                        { selectedBooking = it },
+                        { section = "profile" },
+                        home,
                     )
                 destination == "receipts" ->
                     ConnectedReceipts(market, { selectedBooking = it }, home)
@@ -118,7 +142,10 @@ fun ProviderWorkspaceScreen(auth: ProviderAuthViewModel, pending: Boolean = fals
                             onOpenEarnings = { section = "receipts" },
                             onOpenProfile = { section = "profile" },
                             onOpenNotifications = { section = "activity" },
-                            onSignOut = auth::signOut,
+                            onSignOut = {
+                                JobLocationSharing.stop(appContext)
+                                auth.signOut()
+                            },
                             modifier = Modifier.weight(1f),
                         )
                     }

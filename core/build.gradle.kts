@@ -90,6 +90,9 @@ kotlin {
 }
 
 dependencies {
+    implementation(platform("com.google.firebase:firebase-bom:35.0.1"))
+    implementation("com.google.firebase:firebase-messaging")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.10.2")
     api("androidx.lifecycle:lifecycle-viewmodel-ktx:2.10.0")
     // Shared Android utilities
     implementation(
@@ -119,9 +122,11 @@ dependencies {
         "io.github.jan-tennert.supabase:storage-kt"
     )
 
-    // Android HTTP engine used by Supabase
+    api("io.github.jan-tennert.supabase:realtime-kt")
+
+    // OkHttp supports the authenticated Realtime WebSocket.
     implementation(
-        libs.ktor.client.android
+        "io.ktor:ktor-client-okhttp:${libs.versions.ktor.get()}"
     )
 
     // Testing

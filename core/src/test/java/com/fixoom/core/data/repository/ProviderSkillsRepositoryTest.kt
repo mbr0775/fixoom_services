@@ -57,6 +57,17 @@ class ProviderSkillsRepositoryTest {
             assertEquals("carpentry", requests[2].second["p_category_slug"]!!.jsonPrimitive.content)
             assertEquals(120, requests[2].second["p_duration_minutes"]!!.jsonPrimitive.int)
             assertEquals(120, booking.durationMinutes)
+            repo.setServiceLocation(6.9271, 79.8612, 25)
+            assertEquals("set_service_location", requests[3].first)
+            assertEquals(25, requests[3].second["p_radius_km"]!!.jsonPrimitive.int)
+            repo.shareLocation("booking", 6.9271, 79.8612, 15.0)
+            assertEquals("share_booking_location", requests[4].first)
+            assertEquals("booking", requests[4].second["p_booking_id"]!!.jsonPrimitive.content)
+            repo.shareLocation("booking", null, null)
+            assertEquals(JsonNull, requests[5].second["p_latitude"])
+            repo.markNotificationRead("notification")
+            assertEquals("mark_notification_read", requests[6].first)
+            assertEquals("notification", requests[6].second["p_id"]!!.jsonPrimitive.content)
         } finally {
             client.close()
         }

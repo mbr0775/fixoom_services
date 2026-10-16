@@ -6,6 +6,12 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
+if (file("google-services.json").exists()) apply(plugin = "com.google.gms.google-services")
+
+tasks.matching { it.name == "preReleaseBuild" }.configureEach {
+    doFirst { check(file("google-services.json").exists()) { "Download the Fixoom Provider Firebase configuration before building a release." } }
+}
+
 android {
     namespace = "com.fixoom.provider"
     compileSdk = 37

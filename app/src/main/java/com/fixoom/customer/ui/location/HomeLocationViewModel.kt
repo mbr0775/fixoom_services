@@ -10,16 +10,20 @@ import com.fixoom.customer.data.location.SavedLocation
 import java.io.IOException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.flow.retryWhen
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-enum class LocationRecovery { NONE, APP_SETTINGS, LOCATION_SETTINGS }
+enum class LocationRecovery {
+    NONE,
+    APP_SETTINGS,
+    LOCATION_SETTINGS,
+}
 
 data class HomeLocationUiState(
     val saved: SavedLocation = SavedLocation(),
@@ -27,7 +31,7 @@ data class HomeLocationUiState(
     val locating: Boolean = false,
     val saving: Boolean = false,
     val message: Int? = null,
-    val recovery: LocationRecovery = LocationRecovery.NONE
+    val recovery: LocationRecovery = LocationRecovery.NONE,
 )
 
 class HomeLocationViewModel(application: Application) : AndroidViewModel(application) {
@@ -61,9 +65,10 @@ class HomeLocationViewModel(application: Application) : AndroidViewModel(applica
                         it.copy(
                             saved = saved,
                             ready = true,
-                            message = it.message.takeUnless { message ->
-                                message == R.string.location_load_failed
-                            }
+                            message =
+                                it.message.takeUnless { message ->
+                                    message == R.string.location_load_failed
+                                },
                         )
                     }
                     if (!saved.automatic) cancelFix()
@@ -75,6 +80,7 @@ class HomeLocationViewModel(application: Application) : AndroidViewModel(applica
     }
 
     fun hasPermission(): Boolean = resolver.hasPermission()
+
     fun onForegroundChanged(active: Boolean) {
         foreground = active
         if (active) refresh() else cancelFix()
@@ -139,8 +145,14 @@ class HomeLocationViewModel(application: Application) : AndroidViewModel(applica
 
     fun refresh() {
         val current = state.value
-        if (!foreground || !current.ready || !current.saved.automatic ||
-            current.saving || locationJob?.isActive == true) return
+        if (
+            !foreground ||
+                !current.ready ||
+                !current.saved.automatic ||
+                current.saving ||
+                locationJob?.isActive == true
+        )
+            return
         if (!resolver.hasPermission()) {
             permissionDenied()
             return
@@ -159,9 +171,11 @@ class HomeLocationViewModel(application: Application) : AndroidViewModel(applica
                 if (fix == null) {
                     when {
                         !resolver.hasPermission() -> permissionDenied()
-                        !resolver.isEnabled() -> report(
-                            R.string.location_gps_disabled, LocationRecovery.LOCATION_SETTINGS
-                        )
+                        !resolver.isEnabled() ->
+                            report(
+                                R.string.location_gps_disabled,
+                                LocationRecovery.LOCATION_SETTINGS,
+                            )
                         else -> report(R.string.location_fix_failed)
                     }
                     return@launch
@@ -170,8 +184,11 @@ class HomeLocationViewModel(application: Application) : AndroidViewModel(applica
                 ensureActive()
                 try {
                     preferences.saveDetected(
-                        areaName ?: getApplication<Application>()
-                            .getString(R.string.location_device_fallback)
+                        areaName
+                            ?: getApplication<Application>()
+                                .getString(R.string.location_device_fallback),
+                        fix.latitude,
+                        fix.longitude,
                     )
                 } catch (_: IOException) {
                     report(R.string.location_save_failed)

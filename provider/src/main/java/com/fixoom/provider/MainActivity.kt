@@ -3,8 +3,8 @@ package com.fixoom.provider
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
-import androidx.activity.SystemBarStyle
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
@@ -26,17 +26,37 @@ class MainActivity : ComponentActivity() {
     private lateinit var authViewModel: ProviderAuthViewModel
 
     private var passwordRecoveryLinkOpened by mutableStateOf(false)
+    private var notificationBooking by mutableStateOf<String?>(null)
+
+    private fun readNotification(incoming: Intent) {
+        incoming
+            .getStringExtra("fixoom_booking_id")
+            ?.takeIf { runCatching { java.util.UUID.fromString(it) }.isSuccess }
+            ?.let {
+                notificationBooking = it
+                incoming.removeExtra("fixoom_booking_id")
+            }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         authViewModel = ViewModelProvider(this)[ProviderAuthViewModel::class.java]
 
+        readNotification(intent)
         processAuthenticationLink(intent)
 
         enableEdgeToEdge(
-            statusBarStyle = SystemBarStyle.light(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT),
-            navigationBarStyle = SystemBarStyle.light(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT),
+            statusBarStyle =
+                SystemBarStyle.light(
+                    android.graphics.Color.TRANSPARENT,
+                    android.graphics.Color.TRANSPARENT,
+                ),
+            navigationBarStyle =
+                SystemBarStyle.light(
+                    android.graphics.Color.TRANSPARENT,
+                    android.graphics.Color.TRANSPARENT,
+                ),
         )
 
         setContent {
@@ -61,6 +81,8 @@ class MainActivity : ComponentActivity() {
                         },
                         onContactSupport = ::openSupport,
                         authViewModel = authViewModel,
+                        notificationBooking = notificationBooking,
+                        onNotificationConsumed = { notificationBooking = null },
                     )
                 }
             }
@@ -71,6 +93,7 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
 
         setIntent(intent)
+        readNotification(intent)
         processAuthenticationLink(intent)
     }
 

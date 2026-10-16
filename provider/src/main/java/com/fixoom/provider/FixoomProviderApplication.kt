@@ -1,6 +1,7 @@
 package com.fixoom.provider
 
 import android.app.Application
+import com.fixoom.core.data.notifications.PushMessaging
 import com.fixoom.core.data.remote.FixoomSupabase
 
 class FixoomProviderApplication : Application() {
@@ -12,7 +13,8 @@ class FixoomProviderApplication : Application() {
             supabaseUrl = BuildConfig.SUPABASE_URL,
             supabaseAnonKey = BuildConfig.SUPABASE_ANON_KEY,
             authScheme = "fixoom-provider",
-            authHost = "auth"
+            authHost = "auth",
         )
+        PushMessaging.initialize(this)
     }
 }

@@ -100,7 +100,11 @@ class ProviderSkillsTest {
                 )
             }
         }
-        compose.onAllNodesWithText("Carpentry").onFirst().performScrollTo().performClick()
+        compose
+            .onNodeWithTag("request_skill_carpentry")
+            .performScrollTo()
+            .performClick()
+            .assertIsSelected()
         compose.onNodeWithText("Submit for approval").performScrollTo().performClick()
         compose.runOnIdle { assertNull(submitted) }
         compose
@@ -112,6 +116,7 @@ class ProviderSkillsTest {
             .onNode(hasSetTextAction())
             .performScrollTo()
             .performTextInput("I offer furniture repairs and fitted shelves.")
+        compose.onNode(hasSetTextAction()).performImeAction()
         compose.onNodeWithText("Submit for approval").performScrollTo().performClick()
         compose.runOnIdle {
             assertEquals("carpentry" to "I offer furniture repairs and fitted shelves.", submitted)

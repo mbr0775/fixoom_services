@@ -4,6 +4,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Handyman
@@ -11,7 +13,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.fixoom.core.data.repository.MarketplaceState
 import com.fixoom.core.model.serviceStatus
@@ -25,6 +30,7 @@ fun ProviderSkillsScreen(
     onSubmit: (String, String, () -> Unit) -> Unit,
     onWithdraw: (String) -> Unit,
 ) {
+    val focus = LocalFocusManager.current
     val list = rememberLazyListState()
     val scope = rememberCoroutineScope()
     val skills = state.data.ownService?.skills.orEmpty()
@@ -64,6 +70,7 @@ fun ProviderSkillsScreen(
                                     error = null
                                 },
                                 label = { Text(c.name) },
+                                modifier = Modifier.testTag("request_skill_${c.slug}"),
                                 enabled = !state.saving,
                             )
                         }
@@ -76,6 +83,8 @@ fun ProviderSkillsScreen(
                     Modifier.fillMaxWidth(),
                     label = { Text("Experience and service offered") },
                     minLines = 3,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { focus.clearFocus() }),
                     enabled = !state.saving,
                     shape = RoundedCornerShape(16.dp),
                 )

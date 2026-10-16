@@ -154,7 +154,7 @@ fun ConnectedBookingDetails(
     val detail: BookingDetailViewModel = viewModel(key = "booking-$id")
     val current by detail.state.collectAsStateWithLifecycle()
     LaunchedEffect(id) { detail.open(id) }
-    ObserveServiceUpdates(detail::refresh)
+    ObserveServiceUpdates(id, detail::refresh)
     var message by rememberSaveable(id) { mutableStateOf("") }
     var action by remember { mutableStateOf<String?>(null) }
     var amount by remember { mutableStateOf("") }
@@ -193,6 +193,7 @@ fun ConnectedBookingDetails(
                         "The provider can now review your service request. Its status below updates as the job progresses.",
                     )
                 }
+            item { BookingTrackingCard(booking, current.location, provider, detail::refresh) }
             item {
                 InfoCard(serviceStatus(booking.status), serviceTime(booking.scheduledAt)) {
                     Text("Customer: ${booking.customerName.ifBlank { "Customer" }}")
@@ -418,6 +419,9 @@ fun ConnectedProviderProfile(
             vm.runAction(onSaved = done) { requestSkill(category, description) }
         },
         onWithdrawSkill = { category -> vm.runAction { withdrawSkill(category) } },
+        onSaveLocation = { latitude, longitude, radius ->
+            vm.runAction { setServiceLocation(latitude, longitude, radius) }
+        },
     )
 }
 

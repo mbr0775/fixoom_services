@@ -2,6 +2,14 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-feature android:name="android.hardware.location" android:required="false" />
+
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
 
     <application
         android:name=".FixoomProviderApplication"
@@ -11,6 +19,8 @@
         android:label="@string/app_name"
         android:theme="@style/Theme.Fixoom_Services"
         android:supportsRtl="true">
+
+        <service android:name="com.fixoom.core.data.location.JobLocationService" android:exported="false" android:foregroundServiceType="location" />
 
         <provider
             android:name="androidx.core.content.FileProvider"
@@ -22,6 +32,11 @@
                 android:resource="@xml/profile_photo_paths" />
         </provider>
 
+        <service android:name="com.fixoom.core.data.notifications.FixoomMessagingService" android:exported="false">
+            <intent-filter><action android:name="com.google.firebase.MESSAGING_EVENT" /></intent-filter>
+        </service>
+        <meta-data android:name="firebase_analytics_collection_enabled" android:value="false" />
+        <meta-data android:name="com.google.firebase.messaging.default_notification_channel_id" android:value="fixoom_bookings" />
         <activity
             android:name=".MainActivity"
             android:exported="true"

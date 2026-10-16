@@ -28,6 +28,7 @@ fun ProviderProfileScreens(
     motionEnabled: Boolean = rememberMarketplaceMotionAllowed(),
     onRequestSkill: ((String, String, () -> Unit) -> Unit)? = null,
     onWithdrawSkill: ((String) -> Unit)? = null,
+    onSaveLocation: ((Double?, Double?, Int) -> Unit)? = null,
 ) {
     var page by rememberSaveable { mutableIntStateOf(0) }
     BackHandler(page != 0) { if (!state.saving) page = 0 }
@@ -62,6 +63,7 @@ fun ProviderProfileScreens(
                     onSaveProfile(name, category, area, bio, available) { page = 0 }
                 },
                 onSavePhoto,
+                onSaveLocation,
             )
         } else {
             ProviderProfileOverview(
@@ -90,6 +92,7 @@ private fun ProviderProfileEditor(
     onBack: () -> Unit,
     onSaveProfile: (String, String, String, String, Boolean) -> Unit,
     onSavePhoto: (ByteArray?, () -> Unit) -> Unit,
+    onSaveLocation: ((Double?, Double?, Int) -> Unit)?,
 ) {
     val service = state.data.ownService
     var name by rememberSaveable(service?.id) { mutableStateOf(service?.displayName.orEmpty()) }
@@ -100,6 +103,10 @@ private fun ProviderProfileEditor(
     var available by rememberSaveable(service?.id) { mutableStateOf(service?.isAvailable ?: false) }
     var validation by remember { mutableStateOf<String?>(null) }
     MarketplacePage("Edit profile", state, onRefresh, onBack) {
+        if (onSaveLocation != null)
+            item {
+                ServiceCoverageControls(state.data.serviceLocation, state.saving, onSaveLocation)
+            }
         item {
             ProviderPhotoEditor(
                 service?.avatarPath,

@@ -8,8 +8,13 @@ import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Columns
 import io.github.jan.supabase.postgrest.query.Order
+import io.github.jan.supabase.postgrest.query.filter.FilterOperator
+import io.github.jan.supabase.realtime.*
+import kotlinx.coroutines.*
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.*
+import kotlinx.serialization.json.*
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
@@ -22,11 +27,14 @@ data class MarketplaceSnapshot(
     val ownService: ServiceProfessional? = null,
     val bookings: List<ServiceBooking> = emptyList(),
     val skills: List<ProviderSkill> = emptyList(),
+    val notifications: List<BookingNotification> = emptyList(),
+    val serviceLocation: ServiceLocation? = null,
+    val nearby: Boolean = false,
 )
 
 class MarketplaceRepository(private val client: SupabaseClient = FixoomSupabase.client) {
 
-    suspend fun snapshot(): MarketplaceSnapshot = coroutineScope {
+    suspend fun snapshot(point: DiscoveryPoint? = null): MarketplaceSnapshot = coroutineScope {
         client.auth.awaitInitialization()
         val profile = async { AuthRepository(client).getCurrentProfile() }
         val categories = async {
@@ -39,14 +47,26 @@ class MarketplaceRepository(private val client: SupabaseClient = FixoomSupabase.
                 .decodeList<ServiceCategory>()
         }
         val professionals = async {
-            client
-                .from("provider_profiles")
-                .select(Columns.raw("*,provider_skills(*)")) {
-                    filter { eq("is_available", true) }
-                    order("display_name", Order.ASCENDING)
-                    limit(500)
-                }
-                .decodeList<ServiceProfessional>()
+            if (point != null)
+                client.postgrest
+                    .rpc(
+                        "nearby_providers",
+                        buildJsonObject {
+                            put("p_latitude", point.latitude)
+                            put("p_longitude", point.longitude)
+                            put("p_radius_km", 50)
+                        },
+                    )
+                    .decodeAs<List<ServiceProfessional>>()
+            else
+                client
+                    .from("provider_profiles")
+                    .select(Columns.raw("*,provider_skills(*)")) {
+                        filter { eq("is_available", true) }
+                        order("display_name", Order.ASCENDING)
+                        limit(500)
+                    }
+                    .decodeList<ServiceProfessional>()
         }
         val identity = profile.await()
         val own =
@@ -77,6 +97,18 @@ class MarketplaceRepository(private val client: SupabaseClient = FixoomSupabase.
                     }
                     .decodeList<ServiceBooking>()
             else emptyList()
+        val notifications =
+            if (identity?.accountStatus == AccountStatus.ACTIVE) notifications() else emptyList()
+        val serviceLocation =
+            if (identity?.role == AppRole.PROVIDER)
+                client
+                    .from("provider_service_locations")
+                    .select {
+                        filter { eq("provider_id", identity.id) }
+                    }
+                    .decodeList<ServiceLocation>()
+                    .firstOrNull()
+            else null
         val enabled = categories.await().filter { it.isActive }
         val directory = professionals.await()
         MarketplaceSnapshot(
@@ -93,8 +125,102 @@ class MarketplaceRepository(private val client: SupabaseClient = FixoomSupabase.
             (directory.flatMap { it.skills } + own?.skills.orEmpty()).distinctBy {
                 it.providerId to it.categorySlug
             },
+            notifications,
+            serviceLocation,
+            point != null,
         )
     }
+
+    private val updateJson = Json { ignoreUnknownKeys = true }
+
+    fun updates(bookingId: String? = null): Flow<BookingNotification?> = channelFlow {
+        client.auth.awaitInitialization()
+        val uid = client.auth.currentUserOrNull()?.id ?: return@channelFlow
+        val channel = client.channel("fixoom-${java.util.UUID.randomUUID()}")
+        val alerts =
+            channel.postgresChangeFlow<PostgresAction>("public") {
+                table = "notifications"
+                filter("recipient_id", FilterOperator.EQ, uid)
+            }
+        val positions = bookingId?.let { id ->
+            channel.postgresChangeFlow<PostgresAction>("public") {
+                table = "booking_locations"
+                filter("booking_id", FilterOperator.EQ, id)
+            }
+        }
+        launch {
+            alerts.collect { event ->
+                val notification =
+                    (event as? PostgresAction.Insert)?.record?.let { record ->
+                        if (record["actor_id"]?.jsonPrimitive?.contentOrNull == uid) null
+                        else updateJson.decodeFromJsonElement<BookingNotification>(record)
+                    }
+                send(notification)
+            }
+        }
+        if (positions != null) launch { positions.collect { send(null) } }
+        try {
+            channel.subscribe(blockUntilSubscribed = true)
+            awaitCancellation()
+        } finally {
+            withContext(NonCancellable) {
+                withTimeoutOrNull(5_000) { client.realtime.removeChannel(channel) }
+            }
+        }
+    }
+
+    suspend fun notifications(): List<BookingNotification> =
+        client
+            .from("notifications")
+            .select {
+                order("created_at", Order.DESCENDING)
+                limit(100)
+            }
+            .decodeList()
+
+    suspend fun markNotificationRead(id: String? = null) {
+        client.postgrest.rpc(
+            "mark_notification_read",
+            buildJsonObject { put("p_id", id?.let(::JsonPrimitive) ?: JsonNull) },
+        )
+    }
+
+    suspend fun setServiceLocation(latitude: Double?, longitude: Double?, radiusKm: Int = 25) {
+        client.postgrest.rpc(
+            "set_service_location",
+            buildJsonObject {
+                put("p_latitude", latitude?.let(::JsonPrimitive) ?: JsonNull)
+                put("p_longitude", longitude?.let(::JsonPrimitive) ?: JsonNull)
+                put("p_radius_km", radiusKm)
+            },
+        )
+    }
+
+    suspend fun shareLocation(
+        booking: String,
+        latitude: Double?,
+        longitude: Double?,
+        accuracyM: Double = 0.0,
+    ) {
+        client.postgrest.rpc(
+            "share_booking_location",
+            buildJsonObject {
+                put("p_booking_id", booking)
+                put("p_latitude", latitude?.let(::JsonPrimitive) ?: JsonNull)
+                put("p_longitude", longitude?.let(::JsonPrimitive) ?: JsonNull)
+                put("p_accuracy_m", accuracyM)
+            },
+        )
+    }
+
+    suspend fun jobLocation(id: String): JobLocation? =
+        client
+            .from("booking_locations")
+            .select {
+                filter { eq("booking_id", id) }
+            }
+            .decodeList<JobLocation>()
+            .firstOrNull()
 
     suspend fun categories(): List<ServiceCategory> =
         client

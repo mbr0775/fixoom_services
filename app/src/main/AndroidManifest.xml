@@ -2,6 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- Foreground only. Manual area selection also works without these permissions. -->
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
@@ -20,6 +21,11 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Fixoom_Services">
 
+        <service android:name="com.fixoom.core.data.notifications.FixoomMessagingService" android:exported="false">
+            <intent-filter><action android:name="com.google.firebase.MESSAGING_EVENT" /></intent-filter>
+        </service>
+        <meta-data android:name="firebase_analytics_collection_enabled" android:value="false" />
+        <meta-data android:name="com.google.firebase.messaging.default_notification_channel_id" android:value="fixoom_bookings" />
         <activity
             android:name=".MainActivity"
             android:launchMode="singleTask"

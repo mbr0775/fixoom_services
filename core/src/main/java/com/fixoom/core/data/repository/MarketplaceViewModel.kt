@@ -21,6 +21,14 @@ data class MarketplaceState(
 
 class MarketplaceViewModel : ViewModel() {
     private val repository = MarketplaceRepository()
+    private var discoveryPoint: DiscoveryPoint? = null
+
+    fun setDiscoveryPoint(point: DiscoveryPoint?) {
+        if (discoveryPoint == point) return
+        discoveryPoint = point
+        refresh()
+    }
+
     private val mutable = MutableStateFlow(MarketplaceState())
     private val loadingLock = Mutex()
     val state = mutable.asStateFlow()
@@ -37,7 +45,7 @@ class MarketplaceViewModel : ViewModel() {
     private suspend fun load() {
         loadingLock.withLock {
             try {
-                val data = withTimeout(15_000) { repository.snapshot() }
+                val data = withTimeout(15_000) { repository.snapshot(discoveryPoint) }
                 mutable.value = mutable.value.copy(data = data, loading = false, error = null)
             } catch (cancelled: CancellationException) {
                 if (cancelled is kotlinx.coroutines.TimeoutCancellationException)
@@ -93,20 +101,31 @@ class MarketplaceViewModel : ViewModel() {
             try {
                 val path = withTimeout(45_000) { ProviderPhotoRepository().save(jpeg) }
                 val data = mutable.value.data
-                mutable.value = mutable.value.copy(
-                    data = data.copy(
-                        profile = data.profile?.copy(avatarUrl = path),
-                        ownService = data.ownService?.copy(avatarPath = path),
-                    ),
-                    notice = if (path == null) "Profile photo removed." else "Profile photo updated.",
-                )
+                mutable.value =
+                    mutable.value.copy(
+                        data =
+                            data.copy(
+                                profile = data.profile?.copy(avatarUrl = path),
+                                ownService = data.ownService?.copy(avatarPath = path),
+                            ),
+                        notice =
+                            if (path == null) "Profile photo removed."
+                            else "Profile photo updated.",
+                    )
                 onSaved()
                 load()
             } catch (cancelled: CancellationException) {
                 if (cancelled !is kotlinx.coroutines.TimeoutCancellationException) throw cancelled
-                mutable.value = mutable.value.copy(error = "Photo upload timed out. Refresh your profile before retrying.")
+                mutable.value =
+                    mutable.value.copy(
+                        error = "Photo upload timed out. Refresh your profile before retrying."
+                    )
             } catch (_: Exception) {
-                mutable.value = mutable.value.copy(error = "Your photo could not be saved. Check your connection and try again.")
+                mutable.value =
+                    mutable.value.copy(
+                        error =
+                            "Your photo could not be saved. Check your connection and try again."
+                    )
             } finally {
                 mutable.value = mutable.value.copy(saving = false)
             }

@@ -42,6 +42,8 @@ fun ProviderNavGraph(
     onContactSupport: () -> Unit,
     navController: NavHostController = rememberNavController(),
     authViewModel: ProviderAuthViewModel = viewModel(),
+    notificationBooking: String? = null,
+    onNotificationConsumed: () -> Unit = {},
 ) {
     val uiState by authViewModel.uiState.collectAsStateWithLifecycle()
 
@@ -274,7 +276,11 @@ fun ProviderNavGraph(
             val authenticated = uiState.result as? AuthResult.Authenticated
 
             if (authenticated != null) {
-                ProviderWorkspaceScreen(authViewModel)
+                ProviderWorkspaceScreen(
+                    authViewModel,
+                    notificationBooking = notificationBooking,
+                    onNotificationConsumed = onNotificationConsumed,
+                )
             } else {
                 ProviderSplashScreen()
 
