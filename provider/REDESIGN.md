@@ -13,3 +13,9 @@ Validation used the connected Honor NIC-LX2, Android 15, 720 x 1604 pixels / 320
 The visual redesign above is now connected to shared Supabase repositories. Home availability, requests, active jobs, schedule, professional profile, activity and direct-payment receipts open live screens through `ProviderWorkspaceScreen`. Pending providers can complete their professional profile before approval. Booking details include status actions, history and participant messages. Screens refresh while visible, with manual refresh available.
 
 The original 3D/parallax dashboard remains the provider home. Eight connected phone checks passed across both apps, including the actual provider MainActivity home-to-receipts route. Temporary fixture accounts were removed afterward. Customers pay providers directly after service; recording receipt does not process a payment. Background push and public release preparation remain outstanding. See `../docs/CONNECTED_WORKFLOW.md` for the complete tested journey.
+
+## Light-only provider appearance — October 16, 2026
+
+The provider app always uses its light color scheme, independent of the device theme. Splash and activity launch backgrounds use the light surface palette; edge-to-edge system bars use dark icons. Android automatic force-dark rendering is disabled for this app. The existing teal/lime branding and 3D illustrations remain. The customer app's separate theme preference is unchanged.
+
+Validation: the provider debug APK and test APK built successfully, all four provider unit tests and four existing Compose screen checks passed. The updated app was installed with data preserved on the Honor NIC-LX2 while Android night mode was enabled; live app and isolated dashboard screenshots were captured for visual review.

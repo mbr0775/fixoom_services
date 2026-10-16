@@ -33,7 +33,7 @@ class ProviderRedesignTest {
         compose.setContent {
             val density = LocalDensity.current
             CompositionLocalProvider(LocalDensity provides Density(density.density, 1.5f)) {
-                Fixoom_ServicesTheme(darkTheme = false) {
+                Fixoom_ServicesTheme() {
                     ProviderWelcomeScreen({ created = true }, { signedIn = true })
                 }
             }
@@ -46,16 +46,16 @@ class ProviderRedesignTest {
         screenshot("welcome-large-text")
     }
 
-    @Test fun unknownAvailabilityOffersSetupAndBottomNavigationWorksInDarkTheme() {
+    @Test fun unknownAvailabilityOffersSetupAndBottomNavigationWorksInLightTheme() {
         var profileOpened = 0
         var scheduleOpened = 0
         compose.setContent {
-            Fixoom_ServicesTheme(darkTheme = true) {
+            Fixoom_ServicesTheme() {
                 ProviderDashboardScreen(fixture, null, {}, {}, {}, { scheduleOpened++ }, {},
                     { profileOpened++ }, {}, {})
             }
         }
-        screenshot("dashboard-dark-fixture")
+        screenshot("dashboard-setup-light-fixture")
         compose.onNodeWithTag("provider_nav_schedule").assertIsDisplayed().performClick()
         compose.onNodeWithTag("provider_nav_profile").assertIsDisplayed().performClick()
         compose.onNodeWithText("Set up").performScrollTo()
@@ -69,7 +69,7 @@ class ProviderRedesignTest {
         var earningsOpened = false
         compose.setContent {
             var available by remember { mutableStateOf(false) }
-            Fixoom_ServicesTheme(darkTheme = false) {
+            Fixoom_ServicesTheme() {
                 ProviderDashboardScreen(fixture, available, { available = it }, { jobsOpened = true }, {}, {},
                     { earningsOpened = true }, {}, {}, {})
             }
@@ -86,7 +86,7 @@ class ProviderRedesignTest {
     @Test fun reducedMotionHeroRendersItsContentWithoutAnimationClockAdvancement() {
         compose.mainClock.autoAdvance = false
         compose.setContent {
-            Fixoom_ServicesTheme(darkTheme = false) {
+            Fixoom_ServicesTheme() {
                 ProviderDepthHero("Your craft.", "FIXOOM", "Your workspace", { 1000f }, motionEnabled = false)
             }
         }
