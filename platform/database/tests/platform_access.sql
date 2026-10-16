@@ -34,7 +34,11 @@ do $$ begin
   if not exists(select 1 from public.admin_audit_log where subject_id=current_setting('fixoom.test.provider')::uuid) then raise exception 'Provider review was not audited'; end if;
 end $$;
 select set_config('request.jwt.claim.sub',current_setting('fixoom.test.provider'),true);
-update public.provider_profiles set category_slug='plumbing',service_area='Test area',is_available=true where id=auth.uid();
+select public.request_provider_skill('plumbing','Permission suite plumbing service');
+select set_config('request.jwt.claim.sub',current_setting('fixoom.test.admin'),true);
+select public.review_provider_skill(current_setting('fixoom.test.provider')::uuid,'plumbing','approved');
+select set_config('request.jwt.claim.sub',current_setting('fixoom.test.provider'),true);
+select public.save_provider_profile('Test provider','plumbing','Test area','Permission suite service',true);
 select set_config('request.jwt.claim.sub',current_setting('fixoom.test.customer'),true);
 select set_config('fixoom.test.booking',(public.submit_booking(current_setting('fixoom.test.provider')::uuid,now()+interval '1 day','Test service address','Test leaking kitchen tap')).id::text,true);
 do $$ begin

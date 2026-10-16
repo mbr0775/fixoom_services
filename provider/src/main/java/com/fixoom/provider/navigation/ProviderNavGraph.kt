@@ -179,9 +179,15 @@ fun ProviderNavGraph(
         }
 
         composable(route = ProviderScreen.Register.route) {
+            val categories by authViewModel.categories.collectAsStateWithLifecycle()
+            val categoryError by authViewModel.categoryError.collectAsStateWithLifecycle()
+            LaunchedEffect(Unit) { authViewModel.loadCategories() }
             ProviderRegisterScreen(
                 uiState = uiState,
                 onRegister = authViewModel::register,
+                categories = categories,
+                categoryError = categoryError,
+                onRetryCategories = authViewModel::loadCategories,
                 onSignIn = {
                     authViewModel.clearResult()
 

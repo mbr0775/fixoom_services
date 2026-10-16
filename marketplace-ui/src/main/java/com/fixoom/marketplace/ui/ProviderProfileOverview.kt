@@ -34,7 +34,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.fixoom.core.data.repository.MarketplaceState
 import com.fixoom.core.model.AccountStatus
-import com.fixoom.core.model.serviceStatus
 
 private val ProfileInk = Color(0xFF10363C)
 private val ProfileTeal = Color(0xFF194850)
@@ -56,13 +55,16 @@ internal fun ProviderProfileOverview(
     approvalMessage: String?,
     approvalError: String?,
     motionEnabled: Boolean,
+    onManageSkills: (() -> Unit)? = null,
 ) {
     val profile = state.data.profile
     val service = state.data.ownService
     val name = service?.displayName?.takeIf { it.isNotBlank() } ?: profile?.fullName.orEmpty()
     val category =
-        state.data.categories.firstOrNull { it.slug == service?.categorySlug }?.name
-            ?: service?.categorySlug?.let(::serviceStatus)
+        state.data.categories
+            .filter { service?.offers(it.slug) == true }
+            .joinToString(" / ") { it.name }
+            .takeIf { it.isNotBlank() }
     val list = rememberLazyListState()
     val scrollOffset = {
         list.layoutInfo.visibleItemsInfo
@@ -111,7 +113,7 @@ internal fun ProviderProfileOverview(
             item(key = "profile_identity") {
                 ProfileIdentityHero(
                     name.ifBlank { "Name not added" },
-                    category ?: "Service category not added",
+                    category ?: "Skills awaiting approval",
                     service?.avatarPath ?: profile.avatarUrl,
                     profile.accountStatus,
                     scrollOffset,
@@ -119,11 +121,42 @@ internal fun ProviderProfileOverview(
                 )
             }
             item(key = "profile_essentials") { ProfileEssentials(essentials) }
+            if (onManageSkills != null)
+                item(key = "profile_manage_skills") {
+                    Card(
+                        onClick = onManageSkills,
+                        colors = CardDefaults.cardColors(containerColor = ProfileMint),
+                        shape = RoundedCornerShape(22.dp),
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Row(
+                            Modifier.padding(18.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(14.dp),
+                        ) {
+                            Icon(ProfileDetailIcons.Services, null, tint = ProfileTeal)
+                            Column(Modifier.weight(1f)) {
+                                Text(
+                                    "Skills & services",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                )
+                                val own = service?.skills.orEmpty()
+                                Text(
+                                    "${own.count { it.status == "approved" }} approved / ${own.count { it.status == "pending" }} awaiting review",
+                                    style = MaterialTheme.typography.bodySmall,
+                                )
+                            }
+                            Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null)
+                        }
+                    }
+                }
+
             if (pending) {
                 item(key = "profile_approval") {
                     InfoCard(
                         "Awaiting administrator approval",
-                        "Complete your service profile using the edit icon so the administrator can review it.",
+                        "Complete your profile and describe each offering in Skills & services. Your account and every skill need separate approval.",
                     ) {
                         Button(onCheckApproval, enabled = !checkingApproval && !state.saving) {
                             if (checkingApproval) {
@@ -204,7 +237,7 @@ internal fun ProviderProfileOverview(
                             motionEnabled,
                         ) {
                             ProfileDetailField(
-                                "Service category",
+                                "Approved skills",
                                 category ?: "Not added yet",
                                 ProfileDetailIcons.Category,
                                 ProfileLavender,

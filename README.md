@@ -86,3 +86,10 @@ Photo-update validation: both debug apps built and were installed with app data 
 Profile photo controls now use a tappable avatar and an Edit photo action sheet. Choose gallery or camera, position/zoom/rotate the circular preview, tap Use photo, then Save photo. View photo opens the existing image; Remove photo asks for confirmation. Cancel and Discard leave the saved photo unchanged.
 
 The provider My profile screen now has a portrait header with scroll-driven 3D parallax, expandable read-only detail sections, a saved-data essentials indicator and animated navigation into editing. Motion respects system animation settings and battery saver; all profile data still comes from the shared backend.
+
+
+## Multi-skill provider approvals
+
+Providers select multiple service skills at signup and submit an experience/offering description for each in Profile → Skills & services. The administrator must approve the account and each offering separately. Admin → Providers now includes a paginated Skills & offerings queue, with approve/reject/suspend decisions and audit history. Customers discover/book only approved active services, selecting the category and reserved duration; the backend prevents overlapping accepted work across the provider's skills. Existing published services are preserved and no demo professionals are created.
+
+See [the connected workflow](docs/CONNECTED_WORKFLOW.md#multiple-skills-and-separate-service-approvals--october-16-2026) for usage, checks and deployment limits. All apps continue to share Supabase project `mzkrxovluljvsqzbowwb`.

@@ -13,6 +13,8 @@ import io.github.jan.supabase.auth.exception.AuthRestException
 import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.postgrest.from
 import kotlinx.coroutines.CancellationException
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
@@ -24,6 +26,7 @@ class AuthRepository(private val client: SupabaseClient = FixoomSupabase.client)
         phone: String,
         password: String,
         role: AppRole,
+        skills: List<String> = emptyList(),
     ): AuthResult {
         val cleanName = fullName.trim()
         val cleanEmail = email.trim().lowercase()
@@ -62,6 +65,11 @@ class AuthRepository(private val client: SupabaseClient = FixoomSupabase.client)
                     data = buildJsonObject {
                         put("full_name", cleanName)
                         put("role", role.databaseValue())
+                        if (role == AppRole.PROVIDER)
+                            put(
+                                "skill_categories",
+                                JsonArray(skills.distinct().take(12).map(::JsonPrimitive)),
+                            )
 
                         if (cleanPhone != null) {
                             put("phone", cleanPhone)

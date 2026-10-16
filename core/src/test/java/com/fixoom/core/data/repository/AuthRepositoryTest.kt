@@ -40,7 +40,11 @@ class AuthRepositoryTest {
 
     @Test
     fun providerSignupPreservesLocalPhoneAndUsesProviderConfirmationLink() = runBlocking {
-        fixture(signupRedirect = "fixoom-provider://auth/confirmed", signupPhone = "+94771234567")
+        fixture(
+                signupRedirect = "fixoom-provider://auth/confirmed",
+                signupPhone = "+94771234567",
+                signupSkills = true,
+            )
             .useClient { client, _ ->
                 assertEquals(
                     AuthResult.EmailVerificationRequired,
@@ -51,6 +55,7 @@ class AuthRepositoryTest {
                             "0771234567",
                             PASSWORD,
                             AppRole.PROVIDER,
+                            skills = listOf("plumbing", "carpentry", "plumbing"),
                         ),
                 )
             }
@@ -176,6 +181,7 @@ class AuthRepositoryTest {
         profileRole: String = "provider",
         signupRedirect: String? = null,
         signupPhone: String? = null,
+        signupSkills: Boolean = false,
     ): Fixture {
         val requests = mutableListOf<String>()
         val user =
@@ -187,6 +193,21 @@ class AuthRepositoryTest {
             requests.add(path)
             if (path == "/auth/v1/signup") {
                 signupRedirect?.let { assertEquals(it, request.url.parameters["redirect_to"]) }
+                if (signupSkills) {
+                    val data =
+                        Json.parseToJsonElement(
+                                (request.body as OutgoingContent.ByteArrayContent)
+                                    .bytes()
+                                    .decodeToString()
+                            )
+                            .jsonObject["data"]!!
+                            .jsonObject
+                    assertEquals(
+                        listOf("plumbing", "carpentry"),
+                        data["skill_categories"]!!.jsonArray.map { it.jsonPrimitive.content },
+                    )
+                    assertNull(data["approved_categories"])
+                }
                 signupPhone?.let {
                     val body =
                         (request.body as OutgoingContent.ByteArrayContent).bytes().decodeToString()

@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -37,13 +36,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.fixoom.marketplace.ui.WorkspaceDepthHeader
 
 @Composable
 fun ProviderEmailVerificationScreen(
     onBackToSignIn: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     ProviderStatusLayout(
         icon = Icons.Rounded.MarkEmailRead,
@@ -51,15 +50,16 @@ fun ProviderEmailVerificationScreen(
         title = "Check your email",
         description =
             "Verify your email to finish setting up your account. Check the confirmation email from Fixoom before signing in.",
-        information = listOf(
-            "Open the email sent by Fixoom.",
-            "Tap the verification link.",
-            "Return to the Provider app and sign in."
-        ),
+        information =
+            listOf(
+                "Open the email sent by Fixoom.",
+                "Tap the verification link.",
+                "Return to the Provider app and sign in.",
+            ),
         primaryButtonText = "Back to sign in",
         primaryButtonIcon = Icons.Rounded.MarkEmailRead,
         onPrimaryAction = onBackToSignIn,
-        modifier = modifier
+        modifier = modifier,
     )
 }
 
@@ -68,7 +68,7 @@ fun ProviderPendingApprovalScreen(
     isRefreshing: Boolean,
     onRefreshStatus: () -> Unit,
     onSignOut: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     ProviderStatusLayout(
         icon = Icons.Rounded.HourglassTop,
@@ -76,11 +76,12 @@ fun ProviderPendingApprovalScreen(
         title = "Application under review",
         description =
             "Your provider account was created successfully. The Fixoom team must verify your professional information before you can receive jobs.",
-        information = listOf(
-            "Complete your professional profile.",
-            "Submit the required verification documents.",
-            "Wait for approval from the Fixoom team."
-        ),
+        information =
+            listOf(
+                "Complete your professional profile.",
+                "Add a description for each skill in Skills & services.",
+                "Your account and each skill need administrator approval.",
+            ),
         primaryButtonText = "Check approval status",
         primaryButtonIcon = Icons.Rounded.Refresh,
         onPrimaryAction = onRefreshStatus,
@@ -88,7 +89,7 @@ fun ProviderPendingApprovalScreen(
         secondaryButtonIcon = Icons.Rounded.Logout,
         onSecondaryAction = onSignOut,
         isLoading = isRefreshing,
-        modifier = modifier
+        modifier = modifier,
     )
 }
 
@@ -96,7 +97,7 @@ fun ProviderPendingApprovalScreen(
 fun ProviderSuspendedScreen(
     onContactSupport: () -> Unit,
     onBackToSignIn: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     ProviderStatusLayout(
         icon = Icons.Rounded.Block,
@@ -104,18 +105,19 @@ fun ProviderSuspendedScreen(
         title = "Account suspended",
         description =
             "Access to this provider account has been temporarily suspended. Contact Fixoom support if you believe this is a mistake.",
-        information = listOf(
-            "You cannot accept new bookings.",
-            "Existing access is restricted.",
-            "Support can review your account status."
-        ),
+        information =
+            listOf(
+                "You cannot accept new bookings.",
+                "Existing access is restricted.",
+                "Support can review your account status.",
+            ),
         primaryButtonText = "Contact support",
         primaryButtonIcon = Icons.Rounded.SupportAgent,
         onPrimaryAction = onContactSupport,
         secondaryButtonText = "Back to sign in",
         secondaryButtonIcon = Icons.Rounded.Logout,
         onSecondaryAction = onBackToSignIn,
-        modifier = modifier
+        modifier = modifier,
     )
 }
 
@@ -123,7 +125,7 @@ fun ProviderSuspendedScreen(
 fun ProviderRejectedScreen(
     onContactSupport: () -> Unit,
     onBackToSignIn: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     ProviderStatusLayout(
         icon = Icons.Rounded.Cancel,
@@ -131,18 +133,19 @@ fun ProviderRejectedScreen(
         title = "Application not approved",
         description =
             "Your provider application could not be approved with the submitted information.",
-        information = listOf(
-            "Review the information you submitted.",
-            "Contact support for the rejection reason.",
-            "Support will explain whether you can apply again."
-        ),
+        information =
+            listOf(
+                "Review the information you submitted.",
+                "Contact support for the rejection reason.",
+                "Support will explain whether you can apply again.",
+            ),
         primaryButtonText = "Contact support",
         primaryButtonIcon = Icons.Rounded.SupportAgent,
         onPrimaryAction = onContactSupport,
         secondaryButtonText = "Back to sign in",
         secondaryButtonIcon = Icons.Rounded.Logout,
         onSecondaryAction = onBackToSignIn,
-        modifier = modifier
+        modifier = modifier,
     )
 }
 
@@ -160,105 +163,53 @@ private fun ProviderStatusLayout(
     secondaryButtonText: String? = null,
     secondaryButtonIcon: ImageVector? = null,
     onSecondaryAction: (() -> Unit)? = null,
-    isLoading: Boolean = false
+    isLoading: Boolean = false,
 ) {
+    val scroll = rememberScrollState()
     Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .safeDrawingPadding()
+        modifier =
+            modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+                .safeDrawingPadding()
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(
-                    horizontal = 24.dp,
-                    vertical = 32.dp
-                ),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Spacer(modifier = Modifier.height(30.dp))
-
-            Box(
-                modifier = Modifier
-                    .size(112.dp)
-                    .background(
-                        color = iconColor.copy(alpha = 0.14f),
-                        shape = CircleShape
+            modifier =
+                Modifier.fillMaxSize()
+                    .verticalScroll(scroll)
+                    .padding(
+                        horizontal = 24.dp,
+                        vertical = 32.dp,
                     ),
-                contentAlignment = Alignment.Center
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(78.dp)
-                        .background(
-                            color = iconColor.copy(alpha = 0.18f),
-                            shape = CircleShape
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        modifier = Modifier.size(42.dp),
-                        tint = iconColor
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(30.dp))
-
-            Text(
-                text = title,
-                modifier = Modifier.fillMaxWidth(),
-                style = MaterialTheme.typography.headlineMedium,
-                color = MaterialTheme.colorScheme.onBackground,
-                fontWeight = FontWeight.ExtraBold,
-                textAlign = TextAlign.Center
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Text(
-                text = description,
-                modifier = Modifier.fillMaxWidth(),
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center
-            )
-
-            Spacer(modifier = Modifier.height(30.dp))
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            WorkspaceDepthHeader(title, description, icon, { scroll.value.toFloat() })
+            Spacer(Modifier.height(24.dp))
 
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(
-                        color = MaterialTheme.colorScheme.surfaceVariant
-                            .copy(alpha = 0.55f),
-                        shape = RoundedCornerShape(24.dp)
-                    )
-                    .padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                modifier =
+                    Modifier.fillMaxWidth()
+                        .background(
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
+                            shape = RoundedCornerShape(24.dp),
+                        )
+                        .padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 information.forEach { item ->
-                    Row(
-                        verticalAlignment = Alignment.Top
-                    ) {
+                    Row(verticalAlignment = Alignment.Top) {
                         Icon(
                             imageVector = Icons.Rounded.CheckCircle,
                             contentDescription = null,
-                            modifier = Modifier
-                                .size(22.dp)
-                                .padding(top = 2.dp),
-                            tint = iconColor
+                            modifier = Modifier.size(22.dp).padding(top = 2.dp),
+                            tint = iconColor,
                         )
 
                         Text(
                             text = item,
                             modifier = Modifier.padding(start = 12.dp),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
@@ -269,21 +220,19 @@ private fun ProviderStatusLayout(
             Button(
                 onClick = onPrimaryAction,
                 enabled = !isLoading,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(58.dp),
-                shape = RoundedCornerShape(18.dp)
+                modifier = Modifier.fillMaxWidth().height(58.dp),
+                shape = RoundedCornerShape(18.dp),
             ) {
                 if (isLoading) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(24.dp),
                         color = MaterialTheme.colorScheme.onPrimary,
-                        strokeWidth = 2.5.dp
+                        strokeWidth = 2.5.dp,
                     )
                 } else {
                     Icon(
                         imageVector = primaryButtonIcon,
-                        contentDescription = null
+                        contentDescription = null,
                     )
 
                     Spacer(modifier = Modifier.size(10.dp))
@@ -291,29 +240,27 @@ private fun ProviderStatusLayout(
                     Text(
                         text = primaryButtonText,
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
                     )
                 }
             }
 
             if (
                 secondaryButtonText != null &&
-                secondaryButtonIcon != null &&
-                onSecondaryAction != null
+                    secondaryButtonIcon != null &&
+                    onSecondaryAction != null
             ) {
                 Spacer(modifier = Modifier.height(12.dp))
 
                 OutlinedButton(
                     onClick = onSecondaryAction,
                     enabled = !isLoading,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(58.dp),
-                    shape = RoundedCornerShape(18.dp)
+                    modifier = Modifier.fillMaxWidth().height(58.dp),
+                    shape = RoundedCornerShape(18.dp),
                 ) {
                     Icon(
                         imageVector = secondaryButtonIcon,
-                        contentDescription = null
+                        contentDescription = null,
                     )
 
                     Spacer(modifier = Modifier.size(10.dp))
@@ -321,7 +268,7 @@ private fun ProviderStatusLayout(
                     Text(
                         text = secondaryButtonText,
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.SemiBold,
                     )
                 }
             }

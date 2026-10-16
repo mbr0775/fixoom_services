@@ -4,14 +4,15 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -31,6 +32,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -53,23 +56,32 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.fixoom.core.model.AuthResult
+import com.fixoom.core.model.ServiceCategory
 import com.fixoom.provider.ui.auth.ProviderAuthUiState
+import com.fixoom.provider.ui.components.ProviderDepthHero
 
 @Composable
 fun ProviderRegisterScreen(
     uiState: ProviderAuthUiState,
-    onRegister: (
-        fullName: String,
-        email: String,
-        phone: String,
-        password: String
-    ) -> Unit,
+    onRegister:
+        (
+            fullName: String,
+            email: String,
+            phone: String,
+            password: String,
+            skills: List<String>,
+        ) -> Unit,
     onSignIn: () -> Unit,
     onOpenTerms: () -> Unit,
     onOpenPrivacyPolicy: () -> Unit,
     onBack: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    categories: List<ServiceCategory> = emptyList(),
+    categoryError: String? = null,
+    onRetryCategories: () -> Unit = {},
 ) {
+    var selectedSkills by rememberSaveable { mutableStateOf(listOf<String>()) }
+    val scroll = rememberScrollState()
     var fullName by rememberSaveable {
         mutableStateOf("")
     }
@@ -102,103 +114,94 @@ fun ProviderRegisterScreen(
         mutableStateOf<String?>(null)
     }
 
-    val backendError = when (val result = uiState.result) {
-        is AuthResult.Error -> result.message
-        else -> null
-    }
+    val backendError =
+        when (val result = uiState.result) {
+            is AuthResult.Error -> result.message
+            else -> null
+        }
 
     val canSubmit =
         fullName.isNotBlank() &&
-                email.isNotBlank() &&
-                phone.isNotBlank() &&
-                password.length >= 8 &&
-                confirmPassword.isNotBlank() &&
-                acceptedPolicies &&
-                !uiState.isLoading
+            email.isNotBlank() &&
+            phone.isNotBlank() &&
+            password.length >= 8 &&
+            confirmPassword.isNotBlank() &&
+            acceptedPolicies &&
+            selectedSkills.isNotEmpty() &&
+            !uiState.isLoading
 
     fun submitRegistration() {
-        localError = when {
-            fullName.trim().length < 2 ->
-                "Please enter your full name."
+        localError =
+            when {
+                fullName.trim().length < 2 -> "Please enter your full name."
 
-            !email.contains("@") ->
-                "Please enter a valid email address."
+                !email.contains("@") -> "Please enter a valid email address."
 
-            phone.trim().length < 7 ->
-                "Please enter a valid phone number."
+                phone.trim().length < 7 -> "Please enter a valid phone number."
 
-            password.length < 8 ->
-                "Password must contain at least 8 characters."
+                password.length < 8 -> "Password must contain at least 8 characters."
 
-            password != confirmPassword ->
-                "Passwords do not match."
+                password != confirmPassword -> "Passwords do not match."
 
-            !acceptedPolicies ->
-                "Please accept the Terms and Privacy Policy."
+                selectedSkills.isEmpty() -> "Choose at least one service skill."
+                !acceptedPolicies -> "Please accept the Terms and Privacy Policy."
 
-            else -> null
-        }
+                else -> null
+            }
 
         if (localError == null) {
             onRegister(
                 fullName.trim(),
                 email.trim(),
                 phone.trim(),
-                password
+                password,
+                selectedSkills,
             )
         }
     }
 
     Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .safeDrawingPadding()
-            .imePadding()
+        modifier =
+            modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+                .safeDrawingPadding()
+                .imePadding()
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(
-                    horizontal = 24.dp,
-                    vertical = 16.dp
-                )
+            modifier =
+                Modifier.fillMaxSize()
+                    .verticalScroll(scroll)
+                    .padding(
+                        horizontal = 24.dp,
+                        vertical = 16.dp,
+                    )
         ) {
             IconButton(
                 onClick = onBack,
-                modifier = Modifier
-                    .size(48.dp)
-                    .background(
-                        color = MaterialTheme.colorScheme.surfaceVariant,
-                        shape = RoundedCornerShape(16.dp)
-                    )
+                modifier =
+                    Modifier.size(48.dp)
+                        .background(
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            shape = RoundedCornerShape(16.dp),
+                        ),
             ) {
                 Icon(
                     imageVector = Icons.Rounded.ArrowBack,
-                    contentDescription = "Go back"
+                    contentDescription = "Go back",
                 )
             }
 
             Spacer(modifier = Modifier.height(30.dp))
 
-            Text(
-                text = "Create provider account",
-                style = MaterialTheme.typography.headlineLarge,
-                color = MaterialTheme.colorScheme.onBackground,
-                fontWeight = FontWeight.ExtraBold
+            ProviderDepthHero(
+                "Make your skills\nwork for you.",
+                "JOIN FIXOOM",
+                "Create your account, verify your email, then complete your service offerings for administrator review.",
+                { scroll.value.toFloat() },
+                compact = true,
             )
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            Text(
-                text = "Start with your account details. Professional information will be collected during verification.",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            Spacer(modifier = Modifier.height(30.dp))
-
+            Spacer(Modifier.height(24.dp))
             OutlinedTextField(
                 value = fullName,
                 onValueChange = {
@@ -212,16 +215,14 @@ fun ProviderRegisterScreen(
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Rounded.Person,
-                        contentDescription = null
+                        contentDescription = null,
                     )
                 },
-                keyboardOptions = KeyboardOptions(
-                    imeAction = ImeAction.Next
-                ),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                 singleLine = true,
                 enabled = !uiState.isLoading,
                 shape = RoundedCornerShape(18.dp),
-                colors = providerRegisterFieldColors()
+                colors = providerRegisterFieldColors(),
             )
 
             Spacer(modifier = Modifier.height(14.dp))
@@ -239,17 +240,18 @@ fun ProviderRegisterScreen(
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Rounded.Email,
-                        contentDescription = null
+                        contentDescription = null,
                     )
                 },
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Email,
-                    imeAction = ImeAction.Next
-                ),
+                keyboardOptions =
+                    KeyboardOptions(
+                        keyboardType = KeyboardType.Email,
+                        imeAction = ImeAction.Next,
+                    ),
                 singleLine = true,
                 enabled = !uiState.isLoading,
                 shape = RoundedCornerShape(18.dp),
-                colors = providerRegisterFieldColors()
+                colors = providerRegisterFieldColors(),
             )
 
             Spacer(modifier = Modifier.height(14.dp))
@@ -270,17 +272,18 @@ fun ProviderRegisterScreen(
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Rounded.Phone,
-                        contentDescription = null
+                        contentDescription = null,
                     )
                 },
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Phone,
-                    imeAction = ImeAction.Next
-                ),
+                keyboardOptions =
+                    KeyboardOptions(
+                        keyboardType = KeyboardType.Phone,
+                        imeAction = ImeAction.Next,
+                    ),
                 singleLine = true,
                 enabled = !uiState.isLoading,
                 shape = RoundedCornerShape(18.dp),
-                colors = providerRegisterFieldColors()
+                colors = providerRegisterFieldColors(),
             )
 
             Spacer(modifier = Modifier.height(14.dp))
@@ -301,7 +304,7 @@ fun ProviderRegisterScreen(
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Rounded.Lock,
-                        contentDescription = null
+                        contentDescription = null,
                     )
                 },
                 trailingIcon = {
@@ -322,7 +325,7 @@ fun ProviderRegisterScreen(
                                     "Hide password"
                                 } else {
                                     "Show password"
-                                }
+                                },
                         )
                     }
                 },
@@ -332,14 +335,15 @@ fun ProviderRegisterScreen(
                     } else {
                         PasswordVisualTransformation()
                     },
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Password,
-                    imeAction = ImeAction.Next
-                ),
+                keyboardOptions =
+                    KeyboardOptions(
+                        keyboardType = KeyboardType.Password,
+                        imeAction = ImeAction.Next,
+                    ),
                 singleLine = true,
                 enabled = !uiState.isLoading,
                 shape = RoundedCornerShape(18.dp),
-                colors = providerRegisterFieldColors()
+                colors = providerRegisterFieldColors(),
             )
 
             Spacer(modifier = Modifier.height(14.dp))
@@ -357,7 +361,7 @@ fun ProviderRegisterScreen(
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Rounded.Lock,
-                        contentDescription = null
+                        contentDescription = null,
                     )
                 },
                 visualTransformation =
@@ -366,29 +370,62 @@ fun ProviderRegisterScreen(
                     } else {
                         PasswordVisualTransformation()
                     },
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Password,
-                    imeAction = ImeAction.Done
-                ),
-                keyboardActions = KeyboardActions(
-                    onDone = {
-                        submitRegistration()
-                    }
-                ),
+                keyboardOptions =
+                    KeyboardOptions(
+                        keyboardType = KeyboardType.Password,
+                        imeAction = ImeAction.Done,
+                    ),
+                keyboardActions =
+                    KeyboardActions(
+                        onDone = {
+                            submitRegistration()
+                        }
+                    ),
                 singleLine = true,
                 enabled = !uiState.isLoading,
-                isError =
-                    confirmPassword.isNotEmpty() &&
-                            password != confirmPassword,
+                isError = confirmPassword.isNotEmpty() && password != confirmPassword,
                 shape = RoundedCornerShape(18.dp),
-                colors = providerRegisterFieldColors()
+                colors = providerRegisterFieldColors(),
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            HorizontalDivider()
+            Spacer(Modifier.height(20.dp))
+            Text(
+                "Your service skills",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+            )
+            Text(
+                "Select every service you offer. Your account and each skill need administrator approval before customers can book you.",
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            if (categoryError != null) {
+                Text(categoryError, color = MaterialTheme.colorScheme.error)
+                TextButton(onRetryCategories) { Text("Retry service categories") }
+            } else if (categories.isEmpty()) {
+                Text("Loading service categories...")
+                TextButton(onRetryCategories) { Text("Refresh categories") }
+            }
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                categories.forEach { category ->
+                    FilterChip(
+                        category.slug in selectedSkills,
+                        {
+                            selectedSkills =
+                                if (category.slug in selectedSkills) selectedSkills - category.slug
+                                else selectedSkills + category.slug
+                        },
+                        label = { Text(category.name) },
+                        enabled = !uiState.isLoading,
+                    )
+                }
+            }
+            Spacer(Modifier.height(16.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.Top
+                verticalAlignment = Alignment.Top,
             ) {
                 Checkbox(
                     checked = acceptedPolicies,
@@ -396,31 +433,27 @@ fun ProviderRegisterScreen(
                         acceptedPolicies = it
                         localError = null
                     },
-                    enabled = !uiState.isLoading
+                    enabled = !uiState.isLoading,
                 )
 
-                Column(
-                    modifier = Modifier.padding(top = 5.dp)
-                ) {
+                Column(modifier = Modifier.padding(top = 5.dp)) {
                     Text(
                         text = "I agree to Fixoom’s provider policies.",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
 
                     Row {
                         TextButton(
                             onClick = onOpenTerms,
-                            contentPadding =
-                                ButtonDefaults.TextButtonContentPadding
+                            contentPadding = ButtonDefaults.TextButtonContentPadding,
                         ) {
                             Text("Terms")
                         }
 
                         TextButton(
                             onClick = onOpenPrivacyPolicy,
-                            contentPadding =
-                                ButtonDefaults.TextButtonContentPadding
+                            contentPadding = ButtonDefaults.TextButtonContentPadding,
                         ) {
                             Text("Privacy Policy")
                         }
@@ -428,23 +461,22 @@ fun ProviderRegisterScreen(
                 }
             }
 
-            val displayedError =
-                localError ?: backendError
+            val displayedError = localError ?: backendError
 
             if (displayedError != null) {
                 Spacer(modifier = Modifier.height(12.dp))
 
                 Text(
                     text = displayedError,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(
-                            color = MaterialTheme.colorScheme.errorContainer,
-                            shape = RoundedCornerShape(16.dp)
-                        )
-                        .padding(16.dp),
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .background(
+                                color = MaterialTheme.colorScheme.errorContainer,
+                                shape = RoundedCornerShape(16.dp),
+                            )
+                            .padding(16.dp),
                     color = MaterialTheme.colorScheme.onErrorContainer,
-                    style = MaterialTheme.typography.bodyMedium
+                    style = MaterialTheme.typography.bodyMedium,
                 )
             }
 
@@ -455,21 +487,19 @@ fun ProviderRegisterScreen(
                     submitRegistration()
                 },
                 enabled = canSubmit,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(58.dp),
-                shape = RoundedCornerShape(18.dp)
+                modifier = Modifier.fillMaxWidth().height(58.dp),
+                shape = RoundedCornerShape(18.dp),
             ) {
                 if (uiState.isLoading) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(24.dp),
                         color = MaterialTheme.colorScheme.onPrimary,
-                        strokeWidth = 2.5.dp
+                        strokeWidth = 2.5.dp,
                     )
                 } else {
                     Icon(
                         imageVector = Icons.Rounded.PersonAdd,
-                        contentDescription = null
+                        contentDescription = null,
                     )
 
                     Spacer(modifier = Modifier.size(10.dp))
@@ -477,7 +507,7 @@ fun ProviderRegisterScreen(
                     Text(
                         text = "Create account",
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
                     )
                 }
             }
@@ -487,20 +517,20 @@ fun ProviderRegisterScreen(
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
                     text = "Already registered?",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
 
                 TextButton(
                     onClick = onSignIn,
-                    enabled = !uiState.isLoading
+                    enabled = !uiState.isLoading,
                 ) {
                     Text(
                         text = "Sign in",
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
                     )
                 }
             }
@@ -513,17 +543,10 @@ fun ProviderRegisterScreen(
 @Composable
 private fun providerRegisterFieldColors() =
     OutlinedTextFieldDefaults.colors(
-        focusedBorderColor =
-            MaterialTheme.colorScheme.primary,
-        focusedLeadingIconColor =
-            MaterialTheme.colorScheme.primary,
-        focusedLabelColor =
-            MaterialTheme.colorScheme.primary,
-        cursorColor =
-            MaterialTheme.colorScheme.primary,
-        disabledTextColor =
-            MaterialTheme.colorScheme.onSurface.copy(
-                alpha = 0.55f
-            ),
-        disabledContainerColor = Color.Transparent
+        focusedBorderColor = MaterialTheme.colorScheme.primary,
+        focusedLeadingIconColor = MaterialTheme.colorScheme.primary,
+        focusedLabelColor = MaterialTheme.colorScheme.primary,
+        cursorColor = MaterialTheme.colorScheme.primary,
+        disabledTextColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
+        disabledContainerColor = Color.Transparent,
     )

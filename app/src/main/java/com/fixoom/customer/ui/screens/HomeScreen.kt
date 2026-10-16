@@ -300,7 +300,7 @@ fun HomeScreen(
                     Column(Modifier.padding(horizontal=20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
                         Text("Available professionals",style=MaterialTheme.typography.titleLarge)
                         if(!loading && dataError == null && professionals.isEmpty()) InfoCard("Your service network","Approved professionals appear here when they are available for requests.")
-                        professionals.take(4).forEach { professional -> ProfessionalSummary(professional,categories.find { it.slug==professional.categorySlug }?.name.orEmpty()){onProviderClick(professional.id)} }
+                        professionals.take(4).forEach { professional -> ProfessionalSummary(professional,categories.filter { professional.offers(it.slug) }.joinToString(" / ") { it.name }){onProviderClick(professional.id)} }
                     }
                 }
 

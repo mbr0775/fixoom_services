@@ -9,9 +9,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -51,21 +51,22 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.fixoom.core.model.AuthResult
-import com.fixoom.provider.ui.auth.ProviderAuthUiState
+import com.fixoom.marketplace.ui.WorkspaceDepthHeader
 import com.fixoom.provider.R
-import com.fixoom.provider.ui.components.ProviderBrand
+import com.fixoom.provider.ui.auth.ProviderAuthUiState
 
 @Composable
 fun ProviderLoginScreen(
     uiState: ProviderAuthUiState,
-    onSignIn: (
-        email: String,
-        password: String
-    ) -> Unit,
+    onSignIn:
+        (
+            email: String,
+            password: String,
+        ) -> Unit,
     onCreateAccount: () -> Unit,
     onForgotPassword: () -> Unit,
     onBack: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     var email by rememberSaveable {
         mutableStateOf("")
@@ -79,83 +80,70 @@ fun ProviderLoginScreen(
         mutableStateOf(false)
     }
 
-    val errorMessage = when (val result = uiState.result) {
-        is AuthResult.Error -> result.message
+    val errorMessage =
+        when (val result = uiState.result) {
+            is AuthResult.Error -> result.message
 
-        is AuthResult.WrongApplication ->
-            "This account does not belong to the Fixoom Provider app."
+            is AuthResult.WrongApplication ->
+                "This account does not belong to the Fixoom Provider app."
 
-        else -> null
-    }
+            else -> null
+        }
 
-    val canSubmit =
-        email.isNotBlank() &&
-                password.isNotBlank() &&
-                !uiState.isLoading
+    val canSubmit = email.isNotBlank() && password.isNotBlank() && !uiState.isLoading
 
     fun submitLogin() {
         if (canSubmit) {
             onSignIn(
                 email.trim(),
-                password
+                password,
             )
         }
     }
 
+    val scroll = rememberScrollState()
     Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .safeDrawingPadding()
-            .imePadding()
+        modifier =
+            modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+                .safeDrawingPadding()
+                .imePadding()
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(
-                    horizontal = 24.dp,
-                    vertical = 16.dp
-                )
+            modifier =
+                Modifier.fillMaxSize()
+                    .verticalScroll(scroll)
+                    .padding(
+                        horizontal = 24.dp,
+                        vertical = 16.dp,
+                    )
         ) {
             IconButton(
                 onClick = onBack,
-                modifier = Modifier
-                    .size(48.dp)
-                    .background(
-                        color = MaterialTheme.colorScheme.surfaceVariant,
-                        shape = RoundedCornerShape(16.dp)
-                    )
+                modifier =
+                    Modifier.size(48.dp)
+                        .background(
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            shape = RoundedCornerShape(16.dp),
+                        ),
             ) {
                 Icon(
                     imageVector = Icons.Rounded.ArrowBack,
                     contentDescription = "Go back",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
 
             Spacer(modifier = Modifier.height(26.dp))
 
-            ProviderBrand()
-
-            Spacer(modifier = Modifier.height(26.dp))
-
-            Text(
-                text = "Welcome back",
-                style = MaterialTheme.typography.headlineLarge,
-                color = MaterialTheme.colorScheme.onBackground,
-                fontWeight = FontWeight.ExtraBold
+            WorkspaceDepthHeader(
+                "Welcome back",
+                stringResource(R.string.provider_login_caption),
+                Icons.Rounded.Login,
+                { scroll.value.toFloat() },
             )
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            Text(
-                text = stringResource(R.string.provider_login_caption),
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            Spacer(modifier = Modifier.height(34.dp))
+            Spacer(Modifier.height(24.dp))
 
             OutlinedTextField(
                 value = email,
@@ -172,17 +160,18 @@ fun ProviderLoginScreen(
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Rounded.Email,
-                        contentDescription = null
+                        contentDescription = null,
                     )
                 },
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Email,
-                    imeAction = ImeAction.Next
-                ),
+                keyboardOptions =
+                    KeyboardOptions(
+                        keyboardType = KeyboardType.Email,
+                        imeAction = ImeAction.Next,
+                    ),
                 singleLine = true,
                 enabled = !uiState.isLoading,
                 shape = RoundedCornerShape(18.dp),
-                colors = providerTextFieldColors()
+                colors = providerTextFieldColors(),
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -199,7 +188,7 @@ fun ProviderLoginScreen(
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Rounded.Lock,
-                        contentDescription = null
+                        contentDescription = null,
                     )
                 },
                 trailingIcon = {
@@ -220,7 +209,7 @@ fun ProviderLoginScreen(
                                     "Hide password"
                                 } else {
                                     "Show password"
-                                }
+                                },
                         )
                     }
                 },
@@ -230,32 +219,34 @@ fun ProviderLoginScreen(
                     } else {
                         PasswordVisualTransformation()
                     },
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Password,
-                    imeAction = ImeAction.Done
-                ),
-                keyboardActions = KeyboardActions(
-                    onDone = {
-                        submitLogin()
-                    }
-                ),
+                keyboardOptions =
+                    KeyboardOptions(
+                        keyboardType = KeyboardType.Password,
+                        imeAction = ImeAction.Done,
+                    ),
+                keyboardActions =
+                    KeyboardActions(
+                        onDone = {
+                            submitLogin()
+                        }
+                    ),
                 singleLine = true,
                 enabled = !uiState.isLoading,
                 shape = RoundedCornerShape(18.dp),
-                colors = providerTextFieldColors()
+                colors = providerTextFieldColors(),
             )
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
+                horizontalArrangement = Arrangement.End,
             ) {
                 TextButton(
                     onClick = onForgotPassword,
-                    enabled = !uiState.isLoading
+                    enabled = !uiState.isLoading,
                 ) {
                     Text(
                         text = "Forgot password?",
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.SemiBold,
                     )
                 }
             }
@@ -265,15 +256,15 @@ fun ProviderLoginScreen(
 
                 Text(
                     text = errorMessage,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(
-                            color = MaterialTheme.colorScheme.errorContainer,
-                            shape = RoundedCornerShape(16.dp)
-                        )
-                        .padding(16.dp),
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .background(
+                                color = MaterialTheme.colorScheme.errorContainer,
+                                shape = RoundedCornerShape(16.dp),
+                            )
+                            .padding(16.dp),
                     color = MaterialTheme.colorScheme.onErrorContainer,
-                    style = MaterialTheme.typography.bodyMedium
+                    style = MaterialTheme.typography.bodyMedium,
                 )
             }
 
@@ -284,27 +275,24 @@ fun ProviderLoginScreen(
                     submitLogin()
                 },
                 enabled = canSubmit,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(58.dp),
+                modifier = Modifier.fillMaxWidth().height(58.dp),
                 shape = RoundedCornerShape(18.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor =
-                        MaterialTheme.colorScheme.primary,
-                    contentColor =
-                        MaterialTheme.colorScheme.onPrimary
-                )
+                colors =
+                    ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                    ),
             ) {
                 if (uiState.isLoading) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(24.dp),
                         color = MaterialTheme.colorScheme.onPrimary,
-                        strokeWidth = 2.5.dp
+                        strokeWidth = 2.5.dp,
                     )
                 } else {
                     Icon(
                         imageVector = Icons.Rounded.Login,
-                        contentDescription = null
+                        contentDescription = null,
                     )
 
                     Spacer(modifier = Modifier.size(10.dp))
@@ -312,7 +300,7 @@ fun ProviderLoginScreen(
                     Text(
                         text = "Sign in",
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
                     )
                 }
             }
@@ -322,20 +310,20 @@ fun ProviderLoginScreen(
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
                     text = "New to Fixoom?",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
 
                 TextButton(
                     onClick = onCreateAccount,
-                    enabled = !uiState.isLoading
+                    enabled = !uiState.isLoading,
                 ) {
                     Text(
                         text = "Create provider account",
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
                     )
                 }
             }
@@ -346,21 +334,11 @@ fun ProviderLoginScreen(
 @Composable
 private fun providerTextFieldColors() =
     OutlinedTextFieldDefaults.colors(
-        focusedBorderColor =
-            MaterialTheme.colorScheme.primary,
-        focusedLeadingIconColor =
-            MaterialTheme.colorScheme.primary,
-        focusedLabelColor =
-            MaterialTheme.colorScheme.primary,
-        cursorColor =
-            MaterialTheme.colorScheme.primary,
-        disabledTextColor =
-            MaterialTheme.colorScheme.onSurface.copy(
-                alpha = 0.55f
-            ),
-        disabledBorderColor =
-            MaterialTheme.colorScheme.outline.copy(
-                alpha = 0.45f
-            ),
-        disabledContainerColor = Color.Transparent
+        focusedBorderColor = MaterialTheme.colorScheme.primary,
+        focusedLeadingIconColor = MaterialTheme.colorScheme.primary,
+        focusedLabelColor = MaterialTheme.colorScheme.primary,
+        cursorColor = MaterialTheme.colorScheme.primary,
+        disabledTextColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
+        disabledBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.45f),
+        disabledContainerColor = Color.Transparent,
     )

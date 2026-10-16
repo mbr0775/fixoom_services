@@ -1,6 +1,6 @@
 # Fixoom connected database
 
-These migrations extend the existing Supabase project `mzkrxovluljvsqzbowwb` and its pre-existing `profiles`, `app_role`, `account_status` and profile timestamp trigger. They are **not an initial schema for an empty project**. All seven migrations in this directory have been applied to the existing live project. Do not apply them again manually to that project.
+These migrations extend the existing Supabase project `mzkrxovluljvsqzbowwb` and its pre-existing `profiles`, `app_role`, `account_status` and profile timestamp trigger. They are **not an initial schema for an empty project**. All eight migrations in this directory have been applied to the existing live project. Do not apply them again manually to that project.
 
 The versioned source is `platform/database` on `main` in [fixoom_services](https://github.com/mbr0775/fixoom_services). The local workspace's `Fixoom_Platform/database` is the working source used for this delivery; keep both copies synchronized when making future migrations. The admin repository is separate.
 
@@ -32,3 +32,14 @@ The original test verifies registration, protection against self-assigned admin 
 The Supabase security advisor reports no schema/RLS warnings for this delivery. Leaked-password protection remains disabled; review [Supabase password protection](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection) before public release.
 
 `tests/provider_photos.sql` checks provider-owned uploads and publication, pending-photo privacy, customer/admin access, denial of arbitrary URLs and overwrites, suspension and removal. It uses rollback-only metadata fixtures (no files or users remain). All five SQL suites passed after the photo migration. The Storage API stores actual images; SQL tests validate authorization only.
+
+
+## Multiple provider skills — October 16, 2026
+
+Migration `20261016084710_provider_skills_approval.sql` is applied to the same shared project. `provider_skills` stores one offering per provider/category, with a description and independent pending/approved/rejected/suspended/withdrawn status. Signup selections create pending requests only. Active accounts must still receive administrator approval for every new offering. Existing active providers retain their previously published primary service; additional services are never auto-approved.
+
+Owner-validating RPCs handle requests/withdrawal; `review_provider_skill` is admin-only and audited. Clients cannot directly write approval/category fields. The public directory, skill descriptions, photos and booking creation require an active account and approved active category. Availability also requires a completed service area. Private contact email stays in protected profiles. Removing a skill preserves existing job history.
+
+Customers book an explicit approved skill using `create_service_booking_for_skill`, with a reserved duration of 15–480 minutes (the current app offers common durations). The provider has one shared schedule across all skills. Backend row locks serialize creation/acceptance; overlapping accepted/in-progress reservations are rejected. Requested jobs can overlap until one is accepted. Old clients are routed through the same approval checks, with a 60-minute default duration. Durations reserve time; changing an accepted booking's duration is not yet supported.
+
+All six SQL suites passed against the live schema using rollback-only fixtures: account access, connected lifecycle, contact phone, private email, photos and the new `tests/provider_skills.sql`. The new suite covers signup metadata, self-approval denial, account/skill separation, explicit category booking, idempotency, overlap rejection, withdrawal and completion of an existing job after skill suspension. No synthetic users/bookings remain. Security advisor: no schema/RLS warnings; existing disabled leaked-password protection remains. Performance advisor reports permissive-policy overlap and currently unused indexes; these are monitoring items, not evidence of failed access isolation.

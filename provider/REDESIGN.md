@@ -65,3 +65,10 @@ Both APKs built and were installed on the Honor with account data retained. All 
 Expanded full name, email, phone, category, area, availability and introduction now use individual raised cards with dedicated monoline icons, a soft coloured backplate and readable, selectable values. Cards enter with a short staggered lift and perspective tilt when the section opens. This is a finite reveal; the text rests still for reading. System motion preferences bypass the reveal, and values wrap naturally without fixed heights.
 
 Validation: both APKs built and were installed on the Honor without clearing account data. All six profile device checks passed, including a new long-email/large-text case. The paused-clock test checks offscreen field presence without waiting for a scroll frame; the large-text check exercises scrolling and visibility. Screenshots of normal saved values and large-text fixtures were reviewed. Real full-name, email and phone rendering remains read-only and no provider data was changed during testing.
+
+
+## Whole-workspace depth and real skill requests
+
+The light provider design now continues into registration, login/recovery/status, Skills & services, job lists, schedule/activity/conversations, booking details and receipts. Compact layered headers use raised lime service icons with finite perspective entrance and restrained scroll parallax. Workspace navigation has short directional fades/slides, bypassed by reduced-motion settings. Jobs expose the actual service and reserved duration. Profile remains read-only first; skills open a dedicated request/status screen and editing offers only approved primary skills. No new rendering dependencies or fictional operational data were introduced.
+
+Registration submits selected service categories as untrusted pending requests. Service descriptions and account approval are separately reviewed by the admin before customer discovery. All 21 provider UI checks and 50 unit tests passed; APKs were installed on the Honor without clearing the main apps' data. See the shared connected workflow and versioned SQL policy tests for the full approval contract.

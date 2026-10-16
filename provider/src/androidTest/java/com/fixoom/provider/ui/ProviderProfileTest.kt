@@ -40,6 +40,7 @@ class ProviderProfileTest {
                             "Test service area",
                             "Test service description",
                             true,
+                            approvedCategories = listOf("plumbing"),
                         ),
                     categories = listOf(ServiceCategory("plumbing", "Plumbing")),
                 ),
@@ -165,7 +166,7 @@ class ProviderProfileTest {
             .performTextClearance()
         compose.onNodeWithText("Save professional profile").performScrollTo().performClick()
         compose
-            .onNodeWithText("Add your professional name, category and service area.")
+            .onNodeWithText("Add your professional name and service area.")
             .performScrollTo()
             .assertIsDisplayed()
         compose.runOnIdle { assertEquals(0, saves) }

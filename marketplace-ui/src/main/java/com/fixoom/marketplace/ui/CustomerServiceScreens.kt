@@ -37,7 +37,7 @@ fun ConnectedProviderList(
         }
     val professionals =
         state.data.professionals.filter {
-            (category.isBlank() || it.categorySlug == service?.slug) &&
+            (category.isBlank() || it.offers(service?.slug.orEmpty())) &&
                 (it.displayName + " " + it.serviceArea).contains(search, true)
         }
     MarketplacePage(
@@ -68,7 +68,7 @@ fun ConnectedProviderList(
         items(professionals, key = { it.id }) { p ->
             ProfessionalSummary(
                 p,
-                state.data.categories.find { it.slug == p.categorySlug }?.name.orEmpty(),
+                state.data.categories.filter { p.offers(it.slug) }.joinToString(" / ") { it.name },
             ) {
                 onOpen(p.id)
             }
@@ -90,10 +90,23 @@ fun ConnectedProviderDetails(
             item {
                 InfoCard(
                     provider.displayName,
-                    state.data.categories.find { it.slug == provider.categorySlug }?.name.orEmpty(),
+                    state.data.categories.find { provider.offers(it.slug) }?.name.orEmpty(),
                 ) {
                     ProviderPhoto(provider.avatarPath, provider.displayName, Modifier.size(112.dp))
                     Text("Service area: ${provider.serviceArea}")
+                    Text("Approved services", style = MaterialTheme.typography.titleMedium)
+                    state.data.skills
+                        .filter { it.providerId == id && it.status == "approved" }
+                        .forEach { skill ->
+                            Text(
+                                state.data.categories
+                                    .find { it.slug == skill.categorySlug }
+                                    ?.name
+                                    .orEmpty(),
+                                style = MaterialTheme.typography.titleSmall,
+                            )
+                            Text(skill.description)
+                        }
                     Text(
                         provider.bio.ifBlank { "This professional has not added an introduction." }
                     )
@@ -135,6 +148,9 @@ fun ConnectedBookingForm(
         state.data.profile?.let {
             it.role == AppRole.CUSTOMER && it.accountStatus == AccountStatus.ACTIVE
         } == true
+    var selectedCategory by
+        rememberSaveable(id) { mutableStateOf(provider?.categorySlug.orEmpty()) }
+    var durationMinutes by rememberSaveable { mutableIntStateOf(60) }
     var address by rememberSaveable { mutableStateOf("") }
     var description by rememberSaveable { mutableStateOf("") }
     var scheduled by rememberSaveable {
@@ -178,6 +194,32 @@ fun ConnectedBookingForm(
             }
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    Text("Choose the service", style = MaterialTheme.typography.titleMedium)
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        state.data.categories
+                            .filter { provider.offers(it.slug) }
+                            .forEach { category ->
+                                FilterChip(
+                                    selectedCategory == category.slug,
+                                    { selectedCategory = category.slug },
+                                    label = { Text(category.name) },
+                                )
+                            }
+                    }
+                    Text("Reserve time", style = MaterialTheme.typography.titleMedium)
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf(30, 60, 120, 180, 240).forEach { minutes ->
+                            FilterChip(
+                                durationMinutes == minutes,
+                                { durationMinutes = minutes },
+                                label = { Text("$minutes min") },
+                            )
+                        }
+                    }
+                    Text(
+                        "The provider confirms this time when accepting. Discuss extra time before work starts.",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
                     OutlinedButton(
                         onClick = {
                             val date =
@@ -277,6 +319,8 @@ fun ConnectedBookingForm(
                         onClick = {
                             validation =
                                 when {
+                                    !provider.offers(selectedCategory) ->
+                                        "Choose an approved service."
                                     scheduled <= System.currentTimeMillis() ->
                                         "Choose a future date and time."
                                     address.trim().length < 5 -> "Enter a complete service address."
@@ -292,6 +336,8 @@ fun ConnectedBookingForm(
                                             Instant.ofEpochMilli(scheduled).toString(),
                                             address,
                                             description,
+                                            selectedCategory,
+                                            durationMinutes,
                                         )
                                     onCreated(booking.id)
                                 }

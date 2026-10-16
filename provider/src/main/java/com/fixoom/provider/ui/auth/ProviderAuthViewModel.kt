@@ -3,8 +3,10 @@ package com.fixoom.provider.ui.auth
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.fixoom.core.data.repository.AuthRepository
+import com.fixoom.core.data.repository.MarketplaceRepository
 import com.fixoom.core.model.AppRole
 import com.fixoom.core.model.AuthResult
+import com.fixoom.core.model.ServiceCategory
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.TimeoutCancellationException
@@ -36,6 +38,28 @@ class ProviderAuthViewModel(private val authRepository: AuthRepository = AuthRep
     val approvalStatus = _approvalStatus.asStateFlow()
     private var approvalJob: Job? = null
     private var authJob: Job? = null
+    private val _categories = MutableStateFlow<List<ServiceCategory>>(emptyList())
+    val categories = _categories.asStateFlow()
+    private val _categoryError = MutableStateFlow<String?>(null)
+    val categoryError = _categoryError.asStateFlow()
+
+    fun loadCategories() {
+        viewModelScope.launch {
+            _categoryError.value = null
+            try {
+                _categories.value = withTimeout(15_000) { MarketplaceRepository().categories() }
+                if (_categories.value.isEmpty())
+                    _categoryError.value =
+                        "No service categories are currently available. Contact Fixoom support or retry."
+            } catch (e: CancellationException) {
+                if (e !is TimeoutCancellationException) throw e
+                _categoryError.value = "Service categories timed out. Try again."
+            } catch (_: Exception) {
+                _categoryError.value =
+                    "Could not load service categories. Check your connection and retry."
+            }
+        }
+    }
 
     fun checkApprovalStatus() {
         if (_approvalStatus.value.checking) return
@@ -104,6 +128,7 @@ class ProviderAuthViewModel(private val authRepository: AuthRepository = AuthRep
         email: String,
         phone: String,
         password: String,
+        skills: List<String>,
     ) {
         executeAuthRequest {
             authRepository.register(
@@ -112,6 +137,7 @@ class ProviderAuthViewModel(private val authRepository: AuthRepository = AuthRep
                 phone = phone,
                 password = password,
                 role = AppRole.PROVIDER,
+                skills = skills,
             )
         }
     }

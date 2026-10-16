@@ -18,6 +18,7 @@ do $$ begin
 end $$;
 select set_config('request.jwt.claim.sub',current_setting('fixoom.test.admin'),true);
 select public.review_provider(current_setting('fixoom.test.provider')::uuid,'active');
+select public.review_provider_skill(current_setting('fixoom.test.provider')::uuid,'plumbing','approved');
 select set_config('request.jwt.claim.sub',current_setting('fixoom.test.provider'),true);
 select public.save_provider_profile('Workflow professional','plumbing','Colombo','Test service profile',true);
 select set_config('request.jwt.claim.sub',current_setting('fixoom.test.customer'),true);

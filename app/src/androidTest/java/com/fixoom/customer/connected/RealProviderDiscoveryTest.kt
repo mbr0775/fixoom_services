@@ -40,10 +40,11 @@ class RealProviderDiscoveryTest {
                     ServiceProfessional(
                         "returned-provider-id",
                         "Directory test professional",
-                        "plumbing",
+                        "carpentry",
                         "Registered service area",
                         "",
                         true,
+                        approvedCategories = listOf("plumbing", "carpentry"),
                     )
                 )
         }

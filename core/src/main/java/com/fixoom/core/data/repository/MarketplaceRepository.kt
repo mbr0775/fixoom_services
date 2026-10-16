@@ -6,6 +6,7 @@ import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.postgrest
+import io.github.jan.supabase.postgrest.query.Columns
 import io.github.jan.supabase.postgrest.query.Order
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -20,6 +21,7 @@ data class MarketplaceSnapshot(
     val professionals: List<ServiceProfessional> = emptyList(),
     val ownService: ServiceProfessional? = null,
     val bookings: List<ServiceBooking> = emptyList(),
+    val skills: List<ProviderSkill> = emptyList(),
 )
 
 class MarketplaceRepository(private val client: SupabaseClient = FixoomSupabase.client) {
@@ -39,7 +41,7 @@ class MarketplaceRepository(private val client: SupabaseClient = FixoomSupabase.
         val professionals = async {
             client
                 .from("provider_profiles")
-                .select {
+                .select(Columns.raw("*,provider_skills(*)")) {
                     filter { eq("is_available", true) }
                     order("display_name", Order.ASCENDING)
                     limit(500)
@@ -51,10 +53,13 @@ class MarketplaceRepository(private val client: SupabaseClient = FixoomSupabase.
             if (identity?.role == AppRole.PROVIDER)
                 client
                     .from("provider_profiles")
-                    .select { filter { eq("id", identity.id) } }
+                    .select(Columns.raw("*,provider_skills(*)")) {
+                        filter { eq("id", identity.id) }
+                    }
                     .decodeList<ServiceProfessional>()
                     .firstOrNull()
             else null
+
         val bookings =
             if (identity?.accountStatus == AccountStatus.ACTIVE)
                 client
@@ -73,17 +78,47 @@ class MarketplaceRepository(private val client: SupabaseClient = FixoomSupabase.
                     .decodeList<ServiceBooking>()
             else emptyList()
         val enabled = categories.await().filter { it.isActive }
+        val directory = professionals.await()
         MarketplaceSnapshot(
             identity,
             enabled,
-            professionals.await().filter { p ->
+            directory.filter { p ->
                 p.isAvailable &&
                     p.displayName.isNotBlank() &&
                     p.serviceArea.isNotBlank() &&
-                    enabled.any { it.slug == p.categorySlug }
+                    enabled.any { p.offers(it.slug) }
             },
             own,
             bookings,
+            (directory.flatMap { it.skills } + own?.skills.orEmpty()).distinctBy {
+                it.providerId to it.categorySlug
+            },
+        )
+    }
+
+    suspend fun categories(): List<ServiceCategory> =
+        client
+            .from("service_categories")
+            .select {
+                filter { eq("is_active", true) }
+                order("sort_order", Order.ASCENDING)
+            }
+            .decodeList()
+
+    suspend fun requestSkill(category: String, description: String) {
+        client.postgrest.rpc(
+            "request_provider_skill",
+            buildJsonObject {
+                put("p_category_slug", category)
+                put("p_description", description)
+            },
+        )
+    }
+
+    suspend fun withdrawSkill(category: String) {
+        client.postgrest.rpc(
+            "withdraw_provider_skill",
+            buildJsonObject { put("p_category_slug", category) },
         )
     }
 
@@ -140,11 +175,15 @@ class MarketplaceRepository(private val client: SupabaseClient = FixoomSupabase.
         time: String,
         address: String,
         description: String,
+        category: String,
+        durationMinutes: Int = 60,
     ): ServiceBooking =
         client.postgrest
             .rpc(
-                "create_service_booking",
+                "create_service_booking_for_skill",
                 buildJsonObject {
+                    put("p_category_slug", category)
+                    put("p_duration_minutes", durationMinutes)
                     put("p_request_id", key)
                     put("p_provider_id", provider)
                     put("p_scheduled_at", time)

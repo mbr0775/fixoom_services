@@ -37,11 +37,11 @@ class MarketplaceDirectoryTest {
     fun directoryUsesReturnedIdentityAndExcludesUnavailableOrIncompleteProfiles() = runBlocking {
         val rows =
             """[
-            {"id":"real-id","display_name":"Returned professional","category_slug":"plumbing","service_area":"Colombo","bio":"Registered introduction","is_available":true},
-            {"id":"hidden-category","display_name":"Inactive service","category_slug":"painting","service_area":"Colombo","is_available":true},
-            {"id":"offline","display_name":"Unavailable","category_slug":"plumbing","service_area":"Colombo","is_available":false},
-            {"id":"no-name","display_name":"  ","category_slug":"plumbing","service_area":"Colombo","is_available":true},
-            {"id":"no-area","display_name":"Incomplete","category_slug":"plumbing","service_area":"  ","is_available":true}
+            {"id":"real-id","display_name":"Returned professional","category_slug":"plumbing","approved_categories":["plumbing"],"service_area":"Colombo","bio":"Registered introduction","is_available":true},
+            {"id":"hidden-category","display_name":"Inactive service","category_slug":"painting","approved_categories":["painting"],"service_area":"Colombo","is_available":true},
+            {"id":"offline","display_name":"Unavailable","category_slug":"plumbing","approved_categories":["plumbing"],"service_area":"Colombo","is_available":false},
+            {"id":"no-name","display_name":"  ","category_slug":"plumbing","approved_categories":["plumbing"],"service_area":"Colombo","is_available":true},
+            {"id":"no-area","display_name":"Incomplete","category_slug":"plumbing","approved_categories":["plumbing"],"service_area":"  ","is_available":true}
         ]"""
         withDirectory(rows) { snapshot, _ ->
             val professional = snapshot.professionals.single()
@@ -49,6 +49,20 @@ class MarketplaceDirectoryTest {
             assertEquals("Returned professional", professional.displayName)
             assertEquals("Registered introduction", professional.bio)
             assertEquals("Colombo", professional.serviceArea)
+        }
+    }
+
+    @Test
+    fun unreviewedPrimaryIsHiddenAndApprovedSecondaryIsDiscoverable() = runBlocking {
+        withDirectory(
+            """[
+          {"id":"unreviewed","display_name":"Pending skill","category_slug":"plumbing","service_area":"Colombo","is_available":true},
+          {"id":"secondary","display_name":"Approved secondary","category_slug":"painting","approved_categories":["painting","plumbing"],"service_area":"Colombo","is_available":true,"provider_skills":[{"provider_id":"secondary","category_slug":"plumbing","description":"Approved service details","status":"approved"}]}
+        ]"""
+        ) { snapshot, _ ->
+            assertEquals(listOf("secondary"), snapshot.professionals.map { it.id })
+            assertTrue(snapshot.professionals.single().offers("plumbing"))
+            assertEquals("Approved service details", snapshot.skills.single().description)
         }
     }
 

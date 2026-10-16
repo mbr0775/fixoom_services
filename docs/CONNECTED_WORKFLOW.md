@@ -6,9 +6,9 @@ The customer Android app, provider Android app and Next.js admin panel now use t
 
 1. Open **Fixoom Customer** on the Honor phone. Go to Profile, then account/sign-in. Create a customer account with an email you control and verify the email if prompted.
 2. Open **Fixoom Provider**. Register with a different email you control. Customer, provider and administrator roles use separate identities; an administrator account is not a mobile customer/provider login.
-3. While approval is pending, complete the provider's professional name, active service category, service area and introduction. Save the profile.
-4. Open the admin panel, sign in as **mubassirnasar@gmail.com** using its existing Supabase password, inspect the provider profile and approve it. The official support address is **fixoomservices@gmail.com**.
-5. In Provider, check approval or reopen the app, then enable availability. Only approved, available providers with an active category and completed service area appear in customer discovery.
+3. While approval is pending, complete the provider's professional name, service area and introduction. In Skills & services, add a description for each selected skill.
+4. Open the admin panel, sign in as **mubassirnasar@gmail.com** using its existing Supabase password, inspect and approve the provider account, then review each offering in Skills & offerings. The official support address is **fixoomservices@gmail.com**.
+5. In Provider, check approval or reopen the app, then enable availability. Only approved, available providers with at least one approved active skill and completed service area appear in customer discovery.
 6. In Customer, open the provider and request service with a future date/time, address and problem description. The request is saved to the backend; retries using the same request key do not create duplicate bookings.
 7. In Provider, open Requests, accept the booking, start the job and complete it with the agreed final amount in LKR. Customers pay the provider directly after service. Mark payment received only after receiving the money.
 8. Open the same booking in Customer to see its status, history, final amount, receipt acknowledgment and conversation. Participants can exchange messages from booking details. Admin can inspect the same booking and conversation, manage permitted cancellations and review the audit trail.
@@ -80,3 +80,20 @@ Every gallery/camera selection must pass through Crop & adjust before a Save pho
 Provider Profile now opens a read-only My profile screen with the saved image, service details, availability and account contacts. The toolbar edit icon opens Edit profile, including photo crop/adjust controls. A successful profile save and refresh returns to the updated overview; failed saves stay in the editor. Back from editing returns to the profile view without submitting form changes. Pending providers can still check approval from the overview.
 
 The profile overview now uses a layered portrait header with scroll-driven 3D parallax, animated detail sections and an edit-screen transition. Personal details, Service details and About your work expand to show saved data; editing remains a separate screen. Profile essentials counts saved photo, complete contact fields, service name/category/area and introduction text, without implying phone verification or administrator approval. Motion follows system animation settings, lifecycle and battery saver.
+
+
+## Multiple skills and separate service approvals — October 16, 2026
+
+Use one provider account for all genuine skills. Registration offers the active service categories from the shared database; selected categories start as pending requests. After email confirmation/sign-in, open **Profile → Skills & services**, choose a category and describe the experience/service offered. A request needs 10–2,000 characters. Signup selections need this description completed before an administrator can approve them.
+
+In Admin → Providers, **Skills & offerings** is a separate, paginated review queue. Approve/reject each request, or suspend an approved offering. Account approval alone never publishes an unreviewed skill. Approving a skill alone does not activate a pending/suspended account. Each service decision is audited and appears in Activity. No timer or focus refresh was added.
+
+Once the account and at least one active service are approved, complete the service area and enable availability. Customers discover the same provider in every approved category. The booking form asks for the service and reserved time. All skills use the provider's shared schedule: overlapping accepted/in-progress reservations are blocked by the backend. Old clients use the approved primary service with a 60-minute reservation. Customers still pay providers directly after service.
+
+Profile editing can choose a primary service only from approved categories. Removing an approved skill hides it from new bookings; adding it again requires review. Existing accepted work can still progress and remains in history. This version requires removing/resubmitting to change an approved offering's description. General profile introduction and offering descriptions are separate.
+
+The provider app keeps its light theme and extends the existing depth design with raised icon headers, decorative layers, scroll parallax and short screen transitions across skills, jobs/schedule, booking conversations/details, receipts and authentication screens. Motion follows system settings, lifecycle and battery saver. Text/inputs remain stable for reading and editing.
+
+Validation: both debug APKs and all 50 unit tests passed. All 21 provider UI checks and both customer directory checks passed on Honor NIC-LX2 (including multi-select registration, offering validation/removal confirmation and discovery by an approved secondary skill). All six SQL policy suites passed with rolled-back fixtures. Admin build/TypeScript/lint and browser checks passed, including skill-review confirmation, failed-write recovery, no idle/focus refresh and responsive widths of 1440/1024/390/360. Updated customer and provider APKs were installed with accounts retained. No fictional provider or operational demo data was added.
+
+The migration is applied to shared project `mzkrxovluljvsqzbowwb` and mirrored in both local database folders. Vercel project inspection still returns 403 for the previously specified team, so this update's hosted admin deployment is not verified. Publishing source to GitHub does not itself prove a Vercel deployment succeeded.

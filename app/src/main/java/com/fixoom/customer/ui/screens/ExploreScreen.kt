@@ -182,7 +182,7 @@ fun ExploreScreen(
         categories.map { category ->
             (exploreServices.firstOrNull { it.title.equals(category.name,true) }
                 ?: ExploreService(category.name,category.description,R.drawable.ic_service_cleaning,FixoomMint,ExploreFilter.REPAIRS,0))
-                .copy(description=category.description,professionalCount=professionals.count { it.categorySlug==category.slug })
+                .copy(description=category.description,professionalCount=professionals.count { it.offers(category.slug) })
         }.filter { service ->
             val matchesFilter =
                 selectedFilter == ExploreFilter.ALL ||
@@ -273,7 +273,7 @@ fun ExploreScreen(
                         visibleServices.any { it.title == category.name }
                     }
                     val available = professionals.filter { provider ->
-                        visibleCategories.any { it.slug == provider.categorySlug }
+                        visibleCategories.any { provider.offers(it.slug) }
                     }
                     Column(
                         Modifier.padding(horizontal = 20.dp),
@@ -293,9 +293,7 @@ fun ExploreScreen(
                             ProfessionalSummary(
                                 provider,
                                 categories
-                                    .find { it.slug == provider.categorySlug }
-                                    ?.name
-                                    .orEmpty(),
+                                    .filter { provider.offers(it.slug) }.joinToString(" / ") { it.name },
                             ) {
                                 onProviderClick(provider.id)
                             }

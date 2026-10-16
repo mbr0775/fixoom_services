@@ -137,7 +137,13 @@ fun InfoCard(
 
 @Composable
 fun BookingSummary(booking: ServiceBooking, provider: Boolean, onOpen: () -> Unit) {
-    Card(onClick = onOpen, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp)) {
+    Card(
+        onClick = onOpen,
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+    ) {
         Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(
                 booking.reference,
@@ -150,7 +156,15 @@ fun BookingSummary(booking: ServiceBooking, provider: Boolean, onOpen: () -> Uni
                 },
                 style = MaterialTheme.typography.titleMedium,
             )
+            Text(
+                booking.categoryName.ifBlank { serviceStatus(booking.categorySlug) },
+                style = MaterialTheme.typography.labelLarge,
+            )
             Text(serviceTime(booking.scheduledAt), style = MaterialTheme.typography.bodyMedium)
+            Text(
+                "${booking.durationMinutes} minutes reserved",
+                style = MaterialTheme.typography.bodySmall,
+            )
             Text(
                 serviceStatus(booking.status),
                 color = MaterialTheme.colorScheme.primary,

@@ -2,7 +2,10 @@ package com.fixoom.marketplace.ui
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -57,7 +60,29 @@ fun ConnectedBookings(
                         .contains(query, true)
             }
             .let { if (mode == "schedule") it.sortedBy { b -> b.scheduledAt } else it }
-    MarketplacePage(title, state, vm::refresh, onBack) {
+    val list = rememberLazyListState()
+    MarketplacePage(title, state, vm::refresh, onBack, listState = list) {
+        if (provider)
+            item(key = "workspace_header") {
+                WorkspaceDepthHeader(
+                    title,
+                    when (mode) {
+                        "schedule" ->
+                            "Your accepted work, planned around the time reserved for each service."
+                        "messages" -> "Keep every customer conversation connected to its booking."
+                        "activity" ->
+                            "Follow requests, job progress and completed work in one place."
+                        else ->
+                            "Your craft, your schedule. Review the service and reserved time before accepting."
+                    },
+                    when (mode) {
+                        "schedule" -> Icons.Rounded.CalendarMonth
+                        "messages" -> Icons.Rounded.Forum
+                        else -> Icons.Rounded.Handyman
+                    },
+                    { list.firstVisibleItemScrollOffset.toFloat() },
+                )
+            }
         if (profile == null)
             item {
                 InfoCard(
@@ -153,6 +178,14 @@ fun ConnectedBookingDetails(
                 )
             }
         if (booking != null) {
+            if (provider)
+                item {
+                    WorkspaceDepthHeader(
+                        booking.categoryName.ifBlank { serviceStatus(booking.categorySlug) },
+                        "${serviceStatus(booking.status)} / ${booking.durationMinutes} minutes reserved",
+                        Icons.Rounded.Handyman,
+                    )
+                }
             if (confirmation)
                 item {
                     InfoCard(
@@ -167,6 +200,7 @@ fun ConnectedBookingDetails(
                     Text(
                         "Service: ${booking.categoryName.ifBlank { serviceStatus(booking.categorySlug) }}"
                     )
+                    Text("Reserved time: ${booking.durationMinutes} minutes")
                     Text(booking.serviceAddress)
                     Text(booking.problemDescription)
                 }
@@ -380,6 +414,10 @@ fun ConnectedProviderProfile(
         checkingApproval = checkingApproval,
         approvalMessage = approvalMessage,
         approvalError = approvalError,
+        onRequestSkill = { category, description, done ->
+            vm.runAction(onSaved = done) { requestSkill(category, description) }
+        },
+        onWithdrawSkill = { category -> vm.runAction { withdrawSkill(category) } },
     )
 }
 
@@ -388,7 +426,16 @@ fun ConnectedReceipts(vm: MarketplaceViewModel, onOpen: (String) -> Unit, onBack
     val state by vm.state.collectAsStateWithLifecycle()
     val completed = state.data.bookings.filter { it.status == "completed" }
     val received = completed.filter { it.directPaymentReceived }.sumOf { it.finalAmount ?: 0.0 }
-    MarketplacePage("Direct payment records", state, vm::refresh, onBack) {
+    val list = rememberLazyListState()
+    MarketplacePage("Direct payment records", state, vm::refresh, onBack, listState = list) {
+        item {
+            WorkspaceDepthHeader(
+                "Work completed.\nPayments recorded.",
+                "Your real completed jobs and direct payment receipts.",
+                Icons.Rounded.ReceiptLong,
+                { list.firstVisibleItemScrollOffset.toFloat() },
+            )
+        }
         item {
             InfoCard(
                 "Recorded as received",

@@ -1,6 +1,8 @@
 package com.fixoom.provider.ui.screens
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -11,6 +13,7 @@ import com.fixoom.core.data.repository.MarketplaceViewModel
 import com.fixoom.core.model.AccountStatus
 import com.fixoom.marketplace.ui.*
 import com.fixoom.provider.ui.auth.ProviderAuthViewModel
+import com.fixoom.provider.ui.components.rememberProviderMotionAllowed
 import com.fixoom.provider.ui.screens.dashboard.ProviderDashboardScreen
 
 @Composable
@@ -35,83 +38,100 @@ fun ProviderWorkspaceScreen(auth: ProviderAuthViewModel, pending: Boolean = fals
         selectedBooking = null
     }
     BackHandler(selectedBooking != null || (!pending && section != "home"), onBack = home)
-    Box(
-        Modifier.fillMaxSize()
-            .then(
-                if (section == "home" && !pending && selectedBooking == null) Modifier
-                else Modifier.safeDrawingPadding()
-            )
-    ) {
-        when {
-            selectedBooking != null ->
-                ConnectedBookingDetails(
-                    selectedBooking!!,
-                    market,
-                    provider = true,
-                    onBack = { selectedBooking = null },
+    val motion = rememberProviderMotionAllowed()
+    AnimatedContent(
+        targetState = selectedBooking to section,
+        transitionSpec = {
+            if (motion)
+                (fadeIn(tween(210)) + slideInHorizontally(tween(250)) { it / 14 }).togetherWith(
+                    fadeOut(tween(120))
                 )
-            pending || section == "profile" ->
-                ConnectedProviderProfile(
-                    market,
-                    pending,
-                    home,
-                    auth::checkApprovalStatus,
-                    auth::signOut,
-                    checkingApproval = approval.checking,
-                    approvalMessage = approval.message,
-                    approvalError = approval.error,
+            else fadeIn(snap()).togetherWith(fadeOut(snap()))
+        },
+        label = "provider_workspace_navigation",
+    ) { (bookingId, destination) ->
+        Box(
+            Modifier.fillMaxSize()
+                .then(
+                    if (destination == "home" && !pending && bookingId == null) Modifier
+                    else Modifier.safeDrawingPadding()
                 )
-            section == "receipts" -> ConnectedReceipts(market, { selectedBooking = it }, home)
-            section != "home" ->
-                ConnectedBookings(
-                    market,
-                    provider = true,
-                    mode = section,
-                    onOpen = { selectedBooking = it },
-                    onAccount = { section = "profile" },
-                    onBack = home,
-                )
-            state.data.profile != null ->
-                Column(Modifier.fillMaxSize()) {
-                    state.error?.let { InfoCard("Unable to update", it, error = true) }
-                    ProviderDashboardScreen(
-                        profile = state.data.profile!!,
-                        availability =
-                            state.data.ownService
-                                ?.takeIf { it.categorySlug != null && it.serviceArea.isNotBlank() }
-                                ?.isAvailable,
-                        onAvailabilityChange = { available ->
-                            state.data.ownService?.let { service ->
-                                market.runAction {
-                                    saveProfessional(
-                                        service.displayName,
-                                        service.categorySlug.orEmpty(),
-                                        service.serviceArea,
-                                        service.bio,
-                                        available,
-                                    )
-                                }
-                            }
-                        },
-                        onOpenJobRequests = { section = "requests" },
-                        onOpenActiveJobs = { section = "active" },
-                        onOpenSchedule = { section = "schedule" },
-                        onOpenEarnings = { section = "receipts" },
-                        onOpenProfile = { section = "profile" },
-                        onOpenNotifications = { section = "activity" },
-                        onSignOut = auth::signOut,
-                        modifier = Modifier.weight(1f),
+        ) {
+            when {
+                bookingId != null ->
+                    ConnectedBookingDetails(
+                        bookingId,
+                        market,
+                        provider = true,
+                        onBack = { selectedBooking = null },
                     )
-                }
-            else ->
-                MarketplacePage("Your workspace", state, market::refresh) {
-                    item {
-                        InfoCard(
-                            "Loading your account",
-                            "Your service profile and jobs will appear here.",
+                pending || destination == "profile" ->
+                    ConnectedProviderProfile(
+                        market,
+                        pending,
+                        home,
+                        auth::checkApprovalStatus,
+                        auth::signOut,
+                        checkingApproval = approval.checking,
+                        approvalMessage = approval.message,
+                        approvalError = approval.error,
+                    )
+                destination == "receipts" ->
+                    ConnectedReceipts(market, { selectedBooking = it }, home)
+                destination != "home" ->
+                    ConnectedBookings(
+                        market,
+                        provider = true,
+                        mode = destination,
+                        onOpen = { selectedBooking = it },
+                        onAccount = { section = "profile" },
+                        onBack = home,
+                    )
+                state.data.profile != null ->
+                    Column(Modifier.fillMaxSize()) {
+                        state.error?.let { InfoCard("Unable to update", it, error = true) }
+                        ProviderDashboardScreen(
+                            profile = state.data.profile!!,
+                            availability =
+                                state.data.ownService
+                                    ?.takeIf { service ->
+                                        state.data.categories.any { service.offers(it.slug) } &&
+                                            service.serviceArea.isNotBlank()
+                                    }
+                                    ?.isAvailable,
+                            onAvailabilityChange = { available ->
+                                state.data.ownService?.let { service ->
+                                    market.runAction {
+                                        saveProfessional(
+                                            service.displayName,
+                                            service.categorySlug.orEmpty(),
+                                            service.serviceArea,
+                                            service.bio,
+                                            available,
+                                        )
+                                    }
+                                }
+                            },
+                            onOpenJobRequests = { section = "requests" },
+                            onOpenActiveJobs = { section = "active" },
+                            onOpenSchedule = { section = "schedule" },
+                            onOpenEarnings = { section = "receipts" },
+                            onOpenProfile = { section = "profile" },
+                            onOpenNotifications = { section = "activity" },
+                            onSignOut = auth::signOut,
+                            modifier = Modifier.weight(1f),
                         )
                     }
-                }
+                else ->
+                    MarketplacePage("Your workspace", state, market::refresh) {
+                        item {
+                            InfoCard(
+                                "Loading your account",
+                                "Your service profile and jobs will appear here.",
+                            )
+                        }
+                    }
+            }
         }
     }
 }

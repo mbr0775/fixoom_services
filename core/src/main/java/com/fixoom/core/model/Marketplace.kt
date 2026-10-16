@@ -23,6 +23,20 @@ data class ServiceProfessional(
     val bio: String = "",
     @SerialName("is_available") val isAvailable: Boolean = false,
     @SerialName("avatar_path") val avatarPath: String? = null,
+    @SerialName("approved_categories") val approvedCategories: List<String> = emptyList(),
+    @SerialName("provider_skills") val skills: List<ProviderSkill> = emptyList(),
+) {
+    fun offers(category: String) = category in approvedCategories
+}
+
+@Serializable
+data class ProviderSkill(
+    @SerialName("provider_id") val providerId: String,
+    @SerialName("category_slug") val categorySlug: String,
+    val description: String = "",
+    val status: String = "pending",
+    @SerialName("requested_at") val requestedAt: String = "",
+    @SerialName("reviewed_at") val reviewedAt: String? = null,
 )
 
 @Serializable
@@ -42,6 +56,7 @@ data class ServiceBooking(
     @SerialName("category_name") val categoryName: String = "",
     @SerialName("final_amount") val finalAmount: Double? = null,
     val currency: String = "LKR",
+    @SerialName("duration_minutes") val durationMinutes: Int = 60,
     @SerialName("direct_payment_received") val directPaymentReceived: Boolean = false,
 ) {
     val isClosed

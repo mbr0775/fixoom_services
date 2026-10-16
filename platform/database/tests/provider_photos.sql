@@ -11,6 +11,7 @@ insert into auth.users(id,email,raw_user_meta_data) values
 (current_setting('fixoom.photo.customer')::uuid,'fixoom-photo-customer@example.invalid','{"role":"customer","full_name":"Photo permission customer"}');
 update public.profiles set account_status='active' where id=current_setting('fixoom.photo.b')::uuid;
 update public.provider_profiles set category_slug=(select slug from public.service_categories where is_active order by sort_order limit 1), service_area='Permission test area',is_available=true where id=current_setting('fixoom.photo.b')::uuid;
+insert into public.provider_skills(provider_id,category_slug,description,status) select id,category_slug,'Photo permission approved skill','approved' from public.provider_profiles where id=current_setting('fixoom.photo.b')::uuid;
 set local role authenticated;
 select set_config('request.jwt.claim.sub',current_setting('fixoom.photo.a'),true);
 do $$ begin

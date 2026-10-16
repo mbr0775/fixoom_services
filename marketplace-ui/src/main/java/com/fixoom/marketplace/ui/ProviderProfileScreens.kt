@@ -26,28 +26,40 @@ fun ProviderProfileScreens(
     approvalMessage: String? = null,
     approvalError: String? = null,
     motionEnabled: Boolean = rememberMarketplaceMotionAllowed(),
+    onRequestSkill: ((String, String, () -> Unit) -> Unit)? = null,
+    onWithdrawSkill: ((String) -> Unit)? = null,
 ) {
-    var editing by rememberSaveable { mutableStateOf(false) }
-    BackHandler(editing) { if (!state.saving) editing = false }
+    var page by rememberSaveable { mutableIntStateOf(0) }
+    BackHandler(page != 0) { if (!state.saving) page = 0 }
     AnimatedContent(
-        targetState = editing,
+        targetState = page,
         transitionSpec = {
             if (motionEnabled) {
                 (fadeIn(tween(220)) +
-                        slideInHorizontally(tween(260)) { if (targetState) it / 12 else -it / 12 })
+                        slideInHorizontally(tween(260)) {
+                            if (targetState != 0) it / 12 else -it / 12
+                        })
                     .togetherWith(fadeOut(tween(120)))
             } else fadeIn(snap()).togetherWith(fadeOut(snap()))
         },
         label = "profile_edit_navigation",
-    ) { isEditing ->
-        if (isEditing) {
+    ) { destination ->
+        if (destination == 2 && onRequestSkill != null && onWithdrawSkill != null) {
+            ProviderSkillsScreen(
+                state,
+                onRefresh,
+                { if (!state.saving) page = 0 },
+                onRequestSkill,
+                onWithdrawSkill,
+            )
+        } else if (destination == 1) {
             ProviderProfileEditor(
                 state,
                 pending,
                 onRefresh,
-                { if (!state.saving) editing = false },
+                { if (!state.saving) page = 0 },
                 { name, category, area, bio, available ->
-                    onSaveProfile(name, category, area, bio, available) { editing = false }
+                    onSaveProfile(name, category, area, bio, available) { page = 0 }
                 },
                 onSavePhoto,
             )
@@ -57,13 +69,14 @@ fun ProviderProfileScreens(
                 pending,
                 onRefresh,
                 onBack,
-                { editing = true },
+                { page = 1 },
                 onCheckApproval,
                 onSignOut,
                 checkingApproval,
                 approvalMessage,
                 approvalError,
                 motionEnabled,
+                if (onRequestSkill != null && onWithdrawSkill != null) ({ page = 2 }) else null,
             )
         }
     }
@@ -104,16 +117,23 @@ private fun ProviderProfileEditor(
                     label = { Text("Professional or business name") },
                     enabled = !state.saving,
                 )
-                Text("Service category", style = MaterialTheme.typography.titleMedium)
+                Text("Primary approved skill", style = MaterialTheme.typography.titleMedium)
+                if (service?.approvedCategories.isNullOrEmpty())
+                    Text(
+                        "Request your service skills from the profile screen. They become bookable after administrator approval.",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    state.data.categories.forEach { c ->
-                        FilterChip(
-                            category == c.slug,
-                            { category = c.slug },
-                            label = { Text(c.name) },
-                            enabled = !state.saving,
-                        )
-                    }
+                    state.data.categories
+                        .filter { service?.offers(it.slug) == true }
+                        .forEach { c ->
+                            FilterChip(
+                                category == c.slug,
+                                { category = c.slug },
+                                label = { Text(c.name) },
+                                enabled = !state.saving,
+                            )
+                        }
                 }
                 OutlinedTextField(
                     area,
@@ -133,18 +153,20 @@ private fun ProviderProfileEditor(
                 if (!pending)
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         Text("Available for new requests")
-                        Switch(available, { available = it }, enabled = !state.saving)
+                        Switch(
+                            available,
+                            { available = it },
+                            enabled =
+                                !state.saving &&
+                                    state.data.categories.any { service?.offers(it.slug) == true },
+                        )
                     }
                 validation?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                 Button(
                     {
                         validation =
-                            if (
-                                name.trim().length < 2 ||
-                                    area.trim().length < 2 ||
-                                    category.isBlank()
-                            )
-                                "Add your professional name, category and service area."
+                            if (name.trim().length < 2 || area.trim().length < 2)
+                                "Add your professional name and service area."
                             else null
                         if (validation == null) onSaveProfile(name, category, area, bio, available)
                     },
