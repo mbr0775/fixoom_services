@@ -13,6 +13,7 @@ kotlin { compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarg
 dependencies {
     api(project(":core"))
     implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.core.ktx)
     api(platform(libs.androidx.compose.bom))
     api(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material.icons.extended)

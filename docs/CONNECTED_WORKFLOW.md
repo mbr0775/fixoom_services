@@ -72,3 +72,5 @@ Home, Explore and provider booking routes read the same Supabase directory. Expl
 ### Provider profile photo
 
 Provider Profile → Add/Change photo opens Android Photo Picker. Review the centered preview, then Save photo; Discard leaves the saved photo unchanged. Remove photo clears it. The private shared Storage bucket accepts JPEG uploads up to 1 MB; mobile preparation resizes selected images and strips EXIF/location metadata. The photo is shown on provider home, customer directory/details and admin review. Pending photos remain owner/admin-only; public read requires an approved provider with a complete active service profile. Do not select an arbitrary personal image on behalf of a real user during testing.
+
+Photo controls refinement: tap the provider avatar or Edit photo, choose gallery/camera, adjust crop/zoom/rotation, tap Use photo and then Save photo. View and confirmed removal are in the same action sheet. Camera output is shared only through the provider app's dedicated private cache FileProvider.

@@ -8,9 +8,6 @@ import android.graphics.Matrix
 import android.media.ExifInterface
 import android.net.Uri
 import android.util.LruCache
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.PickVisualMediaRequest
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -23,7 +20,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.fixoom.core.data.repository.ProviderPhotoRepository
 import java.io.ByteArrayInputStream
@@ -32,7 +28,6 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 
@@ -115,86 +110,8 @@ fun ProviderPhoto(
     }
 }
 
-@Composable
-fun ProviderPhotoEditor(
-    path: String?,
-    name: String,
-    busy: Boolean,
-    onSave: (ByteArray?, () -> Unit) -> Unit,
-) {
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    var draft by remember { mutableStateOf<ByteArray?>(null) }
-    var reading by remember { mutableStateOf(false) }
-    var error by remember { mutableStateOf<String?>(null) }
-    val picker =
-        rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
-            if (uri != null)
-                scope.launch {
-                    reading = true
-                    error = null
-                    try {
-                        draft = withContext(Dispatchers.IO) { prepareProviderPhoto(context, uri) }
-                    } catch (cancelled: CancellationException) {
-                        throw cancelled
-                    } catch (_: Exception) {
-                        error = "This image could not be opened. Choose a photo smaller than 15 MB."
-                    } finally {
-                        reading = false
-                    }
-                }
-        }
-    InfoCard(
-        "Profile photo",
-        "Choose a clear photo. Customers can see it after your provider profile is approved.",
-    ) {
-        Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(18.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            ProviderPhoto(path, name, Modifier.size(88.dp), draft)
-            Column {
-                OutlinedButton(
-                    {
-                        picker.launch(
-                            PickVisualMediaRequest(
-                                ActivityResultContracts.PickVisualMedia.ImageOnly
-                            )
-                        )
-                    },
-                    enabled = !busy && !reading,
-                ) {
-                    Text(
-                        if (reading) "Preparing photo…"
-                        else if (path == null) "Add photo" else "Change photo"
-                    )
-                }
-                if (path != null && draft == null)
-                    TextButton({ onSave(null) {} }, enabled = !busy && !reading) {
-                        Text("Remove photo")
-                    }
-            }
-        }
-        if (draft != null) {
-            Text(
-                "Preview — save to update your profile.",
-                style = MaterialTheme.typography.bodySmall,
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Button({ onSave(draft) { draft = null } }, enabled = !busy && !reading) {
-                    Text(if (busy) "Saving photo…" else "Save photo")
-                }
-                TextButton({ draft = null }, enabled = !busy && !reading) { Text("Discard") }
-            }
-        }
-        if (reading) LinearProgressIndicator(Modifier.fillMaxWidth())
-        error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-    }
-}
-
 /** Bounded decode, orientation correction and fresh JPEG encoding remove location/EXIF metadata. */
-fun prepareProviderPhoto(context: Context, uri: Uri): ByteArray {
+fun decodeProviderPhoto(context: Context, uri: Uri): Bitmap {
     val bytes =
         context.contentResolver.openInputStream(uri)?.use { source ->
             val output = ByteArrayOutputStream()
@@ -207,10 +124,10 @@ fun prepareProviderPhoto(context: Context, uri: Uri): ByteArray {
             }
             output.toByteArray()
         } ?: error("Photo unavailable")
-    return prepareProviderPhoto(bytes)
+    return decodeProviderPhoto(bytes)
 }
 
-fun prepareProviderPhoto(bytes: ByteArray): ByteArray {
+fun decodeProviderPhoto(bytes: ByteArray): Bitmap {
     require(bytes.size <= 15 * 1024 * 1024)
     val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
     BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)
@@ -223,7 +140,8 @@ fun prepareProviderPhoto(bytes: ByteArray): ByteArray {
     val orientation = runCatching {
         ExifInterface(ByteArrayInputStream(bytes))
             .getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
-    }.getOrDefault(ExifInterface.ORIENTATION_NORMAL)
+    }
+        .getOrDefault(ExifInterface.ORIENTATION_NORMAL)
     val matrix =
         Matrix().apply {
             when (orientation) {
@@ -244,6 +162,30 @@ fun prepareProviderPhoto(bytes: ByteArray): ByteArray {
         }
     val oriented =
         Bitmap.createBitmap(original, 0, 0, original.width, original.height, matrix, true)
+    if (oriented !== original) original.recycle()
+    return oriented
+}
+
+fun prepareProviderPhoto(context: Context, uri: Uri): ByteArray {
+    val image = decodeProviderPhoto(context, uri)
+    return try {
+        encodeProviderPhoto(image)
+    } finally {
+        image.recycle()
+    }
+}
+
+fun prepareProviderPhoto(bytes: ByteArray): ByteArray {
+    val image = decodeProviderPhoto(bytes)
+    return try {
+        encodeProviderPhoto(image)
+    } finally {
+        image.recycle()
+    }
+}
+
+/** Encode a previewed crop without recycling the bitmap still displayed by Compose. */
+fun encodeProviderPhoto(oriented: Bitmap): ByteArray {
     val side = min(oriented.width, oriented.height)
     val cropped =
         Bitmap.createBitmap(
@@ -261,6 +203,6 @@ fun prepareProviderPhoto(bytes: ByteArray): ByteArray {
     }
     val output = ByteArrayOutputStream()
     check(opaque.compress(Bitmap.CompressFormat.JPEG, 90, output))
-    listOf(original, oriented, cropped, resized, opaque).distinct().forEach { it.recycle() }
+    listOf(cropped, resized, opaque).distinct().filter { it !== oriented }.forEach { it.recycle() }
     return output.toByteArray().also { require(ProviderPhotoRepository.isValidUpload(it)) }
 }

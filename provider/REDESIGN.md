@@ -27,3 +27,11 @@ Professional profile now has Add/Change photo, an explicit preview and Save phot
 Photos appear in the provider dashboard, customer directory/profile and administrator review. Missing photos use initials. The bucket is private: owners/admins can review pending photos; customers and guests can read only the current photo of an approved provider with a complete active service profile.
 
 Photo verification passed 48 unit tests, six provider Compose checks, five rollback-only SQL suites and the admin browser suite. The installed provider photo picker was opened and dismissed without selecting any personal media. Existing account/session data was preserved.
+
+## Photo interaction refinement — October 16, 2026
+
+Profile uses a centered, tappable circular avatar with a camera badge. Edit photo opens a native bottom sheet with gallery, camera, view and remove actions; removal requires confirmation. Gallery and camera images open a circular framing preview with drag/pinch, an accessible zoom slider and rotation. Use photo returns the framed preview to the profile; Save photo uploads through the existing secure backend. Discard, cancelled pickers and cancelled camera capture preserve the saved image.
+
+Camera capture uses a non-exported FileProvider limited to the app's dedicated profile-camera cache folder; no broad gallery or camera permission is added. Captured temporary files are removed after preparation/cancellation. Image decoding remains bounded, orientation-aware and free of EXIF/location metadata in the uploaded JPEG.
+
+Validation for the refinement: both APKs built and were installed on the Honor phone with account data retained. All 48 unit tests and ten provider screen checks passed; the six photo checks were repeated after the final crop status-bar adjustment. Tests cover sheet cancellation, crop bounds, zoom/rotation, JPEG output and the restricted camera FileProvider. Profile, action-sheet and isolated crop screenshots were reviewed in light mode on the phone.
