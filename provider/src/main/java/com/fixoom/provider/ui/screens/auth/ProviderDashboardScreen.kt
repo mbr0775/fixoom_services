@@ -99,7 +99,14 @@ fun ProviderDashboardScreen(
                 }
             }
             AvailabilityPanel(availability, onAvailabilityChange, onOpenProfile)
-            ProviderWorkHub(onOpenJobRequests, onOpenActiveJobs, onOpenSchedule, onOpenEarnings, onOpenHistory)
+            ProviderWorkHub(
+                onOpenJobRequests,
+                onOpenActiveJobs,
+                onOpenSchedule,
+                onOpenEarnings,
+                onOpenHistory,
+                scrollOffset = { scroll.value.toFloat() },
+            )
             Surface(color = MaterialTheme.colorScheme.surfaceVariant, shape = RoundedCornerShape(22.dp)) {
                 Column(Modifier.padding(22.dp)) {
                     Text(stringResource(R.string.provider_profile_title), style = MaterialTheme.typography.titleMedium)

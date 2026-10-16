@@ -19,6 +19,7 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.*
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.layout.boundsInWindow
@@ -34,6 +35,7 @@ import androidx.compose.ui.unit.sp
 import com.fixoom.provider.R
 import com.fixoom.provider.ui.theme.FixoomLime
 import com.fixoom.provider.ui.theme.FixoomTealDark
+import kotlin.math.sin
 
 private enum class WorkGlyph {
     Requests,
@@ -61,9 +63,11 @@ fun ProviderWorkHub(
     onHistory: (() -> Unit)?,
     modifier: Modifier = Modifier,
     motionEnabled: Boolean = rememberProviderMotionAllowed(),
+    scrollOffset: () -> Float = { 0f },
 ) {
     val view = LocalView.current
     var inViewport by remember { mutableStateOf(false) }
+    val orbit = rememberHubOrbit(motionEnabled && inViewport)
     val reveal = remember { Animatable(if (motionEnabled) 0f else 1f) }
     LaunchedEffect(inViewport, motionEnabled) {
         if (!motionEnabled) reveal.snapTo(1f)
@@ -136,6 +140,8 @@ fun ProviderWorkHub(
             reveal = { reveal.value },
             index = 0,
             modifier = Modifier.fillMaxWidth(),
+            orbit = { orbit.value },
+            scrollOffset = scrollOffset,
         )
         BoxWithConstraints(Modifier.fillMaxWidth()) {
             val stacked = maxWidth < 300.dp || LocalDensity.current.fontScale >= 1.3f
@@ -153,6 +159,8 @@ fun ProviderWorkHub(
                                 { reveal.value },
                                 1 + row * 2 + column,
                                 Modifier.weight(1f).fillMaxHeight(),
+                                orbit = { orbit.value },
+                                scrollOffset = scrollOffset,
                             )
                         }
                     }
@@ -170,7 +178,16 @@ private fun WorkCard(
     reveal: () -> Float,
     index: Int,
     modifier: Modifier,
+    orbit: () -> Float,
+    scrollOffset: () -> Float,
 ) {
+    val view = LocalView.current
+    var visible by remember { mutableStateOf(false) }
+    var anchor by remember { mutableFloatStateOf(0f) }
+    fun wave(offset: Float = 0f): Float =
+        if (motionEnabled && visible) sin(orbit() + index * .9f + offset) else 0f
+    fun parallax(): Float =
+        if (motionEnabled && visible) ((scrollOffset() - anchor) / 220f).coerceIn(-1f, 1f) else 0f
     val interactions = remember { MutableInteractionSource() }
     val pressed by interactions.collectIsPressedAsState()
     val pressure by
@@ -192,16 +209,24 @@ private fun WorkCard(
                 if (featured) Color.White.copy(alpha = .1f) else FixoomTealDark.copy(alpha = .055f),
             ),
         modifier =
-            modifier.testTag("work_card_${shortcut.glyph.name.lowercase()}").graphicsLayer {
-                val progress =
-                    if (motionEnabled) (reveal() * 1.48f - index * .1f).coerceIn(0f, 1f) else 1f
-                alpha = .55f + .45f * progress
-                translationY = (1f - progress) * 14.dp.toPx()
-                rotationX = (1f - progress) * 5f - pressure * 1.6f
-                scaleX = 1f - pressure * .025f
-                scaleY = 1f - pressure * .025f
-                cameraDistance = 18 * density
-            },
+            modifier
+                .testTag("work_card_${shortcut.glyph.name.lowercase()}")
+                .onGloballyPositioned {
+                    val bounds = it.boundsInWindow()
+                    val showing = bounds.bottom > 0 && bounds.top < view.rootView.height * .9f
+                    if (showing && !visible) anchor = scrollOffset()
+                    visible = showing
+                }
+                .graphicsLayer {
+                    val progress =
+                        if (motionEnabled) (reveal() * 1.48f - index * .1f).coerceIn(0f, 1f) else 1f
+                    alpha = .55f + .45f * progress
+                    translationY = (1f - progress) * 14.dp.toPx()
+                    rotationX = (1f - progress) * 5f - pressure * 1.6f
+                    scaleX = 1f - pressure * .025f
+                    scaleY = 1f - pressure * .025f
+                    cameraDistance = 18 * density
+                },
     ) {
         if (featured) {
             Row(
@@ -246,9 +271,15 @@ private fun WorkCard(
                 }
                 RequestSculpture(
                     Modifier.padding(start = 12.dp).size(92.dp).graphicsLayer {
-                        translationY = -pressure * 5.dp.toPx()
-                        rotationZ = -4f + pressure * 7f
-                    }
+                        translationY = (wave() * 7f - pressure * 5f) * density
+                        translationX = parallax() * 4.dp.toPx()
+                        rotationX = wave(1.57f) * 9f
+                        rotationY = wave() * 16f + parallax() * 8f
+                        rotationZ = -4f + wave() * 5f + pressure * 7f
+                        cameraDistance = 16 * density
+                    },
+                    hover = { wave() },
+                    tilt = { wave(1.57f) },
                 )
             }
         } else {
@@ -264,9 +295,14 @@ private fun WorkCard(
                     Box(
                         Modifier.size(44.dp)
                             .graphicsLayer {
-                                rotationZ = -5f + pressure * 8f
-                                translationY = -pressure * 3.dp.toPx()
-                                shadowElevation = 5.dp.toPx()
+                                rotationZ = -5f + wave() * 5f + pressure * 8f
+                                rotationX = wave(1.57f) * 14f
+                                rotationY = wave() * 18f + parallax() * 9f
+                                translationY = (wave() * 4f - pressure * 3f) * density
+                                scaleX = 1f + wave(1.57f) * .025f
+                                scaleY = scaleX
+                                shadowElevation = (6f + wave() * 2f).dp.toPx()
+                                cameraDistance = 14 * density
                                 shape = RoundedCornerShape(15.dp)
                             }
                             .background(Color.White.copy(alpha = .9f), RoundedCornerShape(15.dp)),
@@ -424,54 +460,69 @@ private fun WorkLineIcon(glyph: WorkGlyph, modifier: Modifier, color: Color) {
 }
 
 @Composable
-private fun RequestSculpture(modifier: Modifier) {
-    Canvas(modifier.clearAndSetSemantics {}) {
-        scale(size.width / 100f, size.height / 100f, Offset.Zero) {
-            fun face(color: Color, points: List<Offset>) {
-                drawPath(
-                    Path().apply {
-                        points.forEachIndexed { i, p ->
-                            if (i == 0) moveTo(p.x, p.y) else lineTo(p.x, p.y)
-                        }
-                        close()
-                    },
-                    color,
-                )
-            }
+private fun rememberHubOrbit(enabled: Boolean): State<Float> {
+    if (!enabled) return remember { mutableFloatStateOf(0f) }
+    val transition = rememberInfiniteTransition(label = "work_hub_orbit")
+    return transition.animateFloat(
+        0f,
+        (Math.PI * 2).toFloat(),
+        infiniteRepeatable(tween(6000, easing = LinearEasing), RepeatMode.Restart),
+        label = "work_hub_depth_phase",
+    )
+}
+
+private fun DrawScope.hubFace(color: Color, points: List<Offset>) {
+    drawPath(
+        Path().apply {
+            points.forEachIndexed { i, p -> if (i == 0) moveTo(p.x, p.y) else lineTo(p.x, p.y) }
+            close()
+        },
+        color,
+    )
+}
+
+@Composable
+private fun SculptureLayer(modifier: Modifier = Modifier, draw: DrawScope.() -> Unit) {
+    Canvas(modifier.fillMaxSize()) {
+        scale(size.width / 100f, size.height / 100f, Offset.Zero) { draw() }
+    }
+}
+
+/** Independent graphics layers give the paper and badge depth above the stationary tray. */
+@Composable
+private fun RequestSculpture(modifier: Modifier, hover: () -> Float, tilt: () -> Float) {
+    Box(modifier.clearAndSetSemantics {}) {
+        SculptureLayer {
             drawOval(Color.Black.copy(alpha = .2f), Offset(8f, 76f), Size(86f, 17f))
-            face(
+            hubFace(
                 Color(0xFF5D8C78),
-                listOf(
-                    Offset(6f, 51f),
-                    Offset(50f, 33f),
-                    Offset(94f, 51f),
-                    Offset(50f, 71f),
-                ),
+                listOf(Offset(6f, 51f), Offset(50f, 33f), Offset(94f, 51f), Offset(50f, 71f)),
             )
-            face(
+            hubFace(
                 Color(0xFF89AA72),
-                listOf(
-                    Offset(6f, 51f),
-                    Offset(50f, 71f),
-                    Offset(50f, 88f),
-                    Offset(6f, 68f),
-                ),
+                listOf(Offset(6f, 51f), Offset(50f, 71f), Offset(50f, 88f), Offset(6f, 68f)),
             )
-            face(
+            hubFace(
                 Color(0xFFB4D37D),
-                listOf(
-                    Offset(50f, 71f),
-                    Offset(94f, 51f),
-                    Offset(94f, 68f),
-                    Offset(50f, 88f),
-                ),
+                listOf(Offset(50f, 71f), Offset(94f, 51f), Offset(94f, 68f), Offset(50f, 88f)),
             )
+        }
+        SculptureLayer(
+            Modifier.graphicsLayer {
+                translationY = -hover() * 5.dp.toPx()
+                translationX = tilt() * 2.dp.toPx()
+                rotationY = tilt() * 7f
+                cameraDistance = 14 * density
+            }
+        ) {
             drawRoundRect(Color(0xFFAC9FD4), Offset(27f, 14f), Size(49f, 51f), CornerRadius(7f))
             drawRoundRect(Color(0xFFE4DDF9), Offset(21f, 9f), Size(49f, 51f), CornerRadius(7f))
             drawLine(Color(0xFF6B6290), Offset(32f, 23f), Offset(58f, 23f), 3f, StrokeCap.Round)
             drawLine(Color(0xFFB7AACA), Offset(32f, 33f), Offset(55f, 33f), 3f, StrokeCap.Round)
             drawLine(Color(0xFFB7AACA), Offset(32f, 43f), Offset(48f, 43f), 3f, StrokeCap.Round)
-            face(
+        }
+        SculptureLayer {
+            hubFace(
                 FixoomLime,
                 listOf(
                     Offset(6f, 51f),
@@ -485,6 +536,14 @@ private fun RequestSculpture(modifier: Modifier) {
                     Offset(6f, 74f),
                 ),
             )
+        }
+        SculptureLayer(
+            Modifier.graphicsLayer {
+                translationY = hover() * 4.dp.toPx()
+                translationX = -tilt() * 3.dp.toPx()
+                rotationZ = tilt() * 10f
+            }
+        ) {
             drawCircle(Color(0xFF163F40), 13f, Offset(80f, 26f))
             drawLine(FixoomLime, Offset(74f, 26f), Offset(78f, 30f), 2.5f, StrokeCap.Round)
             drawLine(FixoomLime, Offset(78f, 30f), Offset(87f, 21f), 2.5f, StrokeCap.Round)

@@ -4,7 +4,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -19,6 +21,44 @@ import org.junit.Test
 /** Presentation fixtures only; no profile, booking or backend writes. */
 class ProviderWorkHubTest {
     @get:Rule val compose = createComposeRule()
+
+    @Test
+    fun depthChangesArtworkButKeepsTextStillAndStopsWhenMotionIsDisabled() {
+        compose.mainClock.autoAdvance = false
+        val enabled = mutableStateOf(true)
+        compose.setContent {
+            Fixoom_ServicesTheme {
+                Column(
+                    Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp)
+                ) {
+                    ProviderWorkHub({}, {}, {}, {}, {}, motionEnabled = enabled.value)
+                }
+            }
+        }
+        compose.mainClock.advanceTimeBy(800)
+        compose.waitForIdle()
+        val card = compose.onNodeWithTag("work_card_requests")
+        val titleBefore = compose.onNodeWithText("Job requests").fetchSemanticsNode().boundsInRoot
+        val before = card.captureToImage().asAndroidBitmap()
+        compose.mainClock.advanceTimeBy(1500)
+        compose.waitForIdle()
+        val after = card.captureToImage().asAndroidBitmap()
+        assertFalse("The layered illustration should visibly animate", before.sameAs(after))
+        assertEquals(
+            titleBefore,
+            compose.onNodeWithText("Job requests").fetchSemanticsNode().boundsInRoot,
+        )
+        compose.runOnIdle { enabled.value = false }
+        compose.mainClock.advanceTimeBy(200)
+        compose.waitForIdle()
+        val still = card.captureToImage().asAndroidBitmap()
+        compose.mainClock.advanceTimeBy(1500)
+        compose.waitForIdle()
+        assertTrue(
+            "Disabled decorative motion must stay still",
+            still.sameAs(card.captureToImage().asAndroidBitmap()),
+        )
+    }
 
     @Test
     fun allFiveShortcutsKeepTheirOwnNavigationActions() {
