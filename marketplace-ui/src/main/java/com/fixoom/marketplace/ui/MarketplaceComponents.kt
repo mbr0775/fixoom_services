@@ -45,6 +45,7 @@ fun MarketplacePage(
     state: MarketplaceState,
     refresh: () -> Unit,
     onBack: (() -> Unit)? = null,
+    headerActions: @Composable RowScope.() -> Unit = {},
     content: LazyListScope.() -> Unit,
 ) {
     Scaffold(
@@ -67,6 +68,7 @@ fun MarketplacePage(
                         }
                 },
                 actions = {
+                    headerActions()
                     IconButton(onClick = refresh, enabled = !state.saving) {
                         Icon(Icons.Rounded.Refresh, "Refresh")
                     }

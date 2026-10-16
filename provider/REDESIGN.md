@@ -39,3 +39,9 @@ Validation for the refinement: both APKs built and were installed on the Honor p
 Crop refinement: the preview now includes Adjust crop, which reopens the original selected image for another framing pass before upload. Both gallery and camera selections require explicit crop confirmation; the action sheet fully expands and scrolls so actions remain reachable.
 
 Validation: both normal debug APKs build and all 48 unit tests pass. All eight photo instrumentation checks passed on the Honor in a temporary separate package that preserved the regular app's unsaved preview. The gallery crop/re-adjust/save flow was repeated for screenshot review and verifies adjusted output pixels; the camera cancellation check verifies no save callback. Test media and save callbacks remain isolated from the shared backend. The temporary test apps were removed.
+
+## Profile view and edit separation
+
+My profile presents the saved provider photo, service area, description, availability, account email and phone as read-only details. The accessible toolbar edit icon opens a separate Edit profile screen. Photo selection and crop controls are available there. Successful profile save plus data refresh returns to the updated overview; validation/backend errors stay in the editor. Back exits editing without submitting form changes. Pending-provider approval checking stays on the overview.
+
+Validation: both standard APKs built; all 48 unit tests and all 16 provider device checks passed, including read-only display, edit navigation, successful-save return, invalid/failed saves, back without submitting, pending approval and large text. Fixture screenshots of both screens were reviewed. Device checks used a temporary separate package to preserve the regular app's existing unsaved photo preview, and the temporary apps were removed.

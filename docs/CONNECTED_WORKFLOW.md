@@ -76,3 +76,5 @@ Provider Profile → Add/Change photo opens Android Photo Picker. Review the cen
 Photo controls refinement: tap the provider avatar or Edit photo, choose gallery/camera, adjust crop/zoom/rotation, tap Use photo and then Save photo. View and confirmed removal are in the same action sheet. Camera output is shared only through the provider app's dedicated private cache FileProvider.
 
 Every gallery/camera selection must pass through Crop & adjust before a Save photo preview is available. Adjust crop reopens the original selected image before upload, so reframing does not repeatedly crop a compressed preview. Cancel keeps the last confirmed preview; Discard leaves the published photo unchanged.
+
+Provider Profile now opens a read-only My profile screen with the saved image, service details, availability and account contacts. The toolbar edit icon opens Edit profile, including photo crop/adjust controls. A successful profile save and refresh returns to the updated overview; failed saves stay in the editor. Back from editing returns to the profile view without submitting form changes. Pending providers can still check approval from the overview.

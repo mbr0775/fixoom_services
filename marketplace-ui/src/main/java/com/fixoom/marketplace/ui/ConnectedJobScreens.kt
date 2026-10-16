@@ -366,111 +366,21 @@ fun ConnectedProviderProfile(
     approvalError: String? = null,
 ) {
     val state by vm.state.collectAsStateWithLifecycle()
-    val service = state.data.ownService
-    var name by rememberSaveable(service?.id) { mutableStateOf(service?.displayName.orEmpty()) }
-    var area by rememberSaveable(service?.id) { mutableStateOf(service?.serviceArea.orEmpty()) }
-    var bio by rememberSaveable(service?.id) { mutableStateOf(service?.bio.orEmpty()) }
-    var category by
-        rememberSaveable(service?.id) { mutableStateOf(service?.categorySlug.orEmpty()) }
-    var available by rememberSaveable(service?.id) { mutableStateOf(service?.isAvailable ?: false) }
-    var validation by remember { mutableStateOf<String?>(null) }
-    MarketplacePage("Professional profile", state, vm::refresh, onBack) {
-        item {
-            ProviderPhotoEditor(
-                service?.avatarPath,
-                name.ifBlank { state.data.profile?.fullName.orEmpty() },
-                state.saving || service == null,
-                vm::saveProviderPhoto,
-            )
-        }
-        if (pending)
-            item {
-                InfoCard(
-                    "Awaiting administrator approval",
-                    "Complete your service profile so the Fixoom administrator can review it. After approval, turn on availability to receive customer requests.",
-                ) {
-                    Button(onCheckApproval, enabled = !checkingApproval && !state.saving) {
-                        if (checkingApproval) {
-                            CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-                            Spacer(Modifier.width(8.dp))
-                        }
-                        Text(
-                            if (checkingApproval) "Checking approval…" else "Check approval status"
-                        )
-                    }
-                    approvalMessage?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
-                    approvalError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-                }
-            }
-        item {
-            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                OutlinedTextField(
-                    name,
-                    { if (it.length <= 100) name = it },
-                    Modifier.fillMaxWidth(),
-                    label = { Text("Professional or business name") },
-                    enabled = !state.saving,
-                )
-                Text("Service category", style = MaterialTheme.typography.titleMedium)
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    state.data.categories.forEach { c ->
-                        FilterChip(
-                            category == c.slug,
-                            { category = c.slug },
-                            label = { Text(c.name) },
-                            enabled = !state.saving,
-                        )
-                    }
-                }
-                OutlinedTextField(
-                    area,
-                    { if (it.length <= 150) area = it },
-                    Modifier.fillMaxWidth(),
-                    label = { Text("Service area, e.g. Colombo") },
-                    enabled = !state.saving,
-                )
-                OutlinedTextField(
-                    bio,
-                    { if (it.length <= 2000) bio = it },
-                    Modifier.fillMaxWidth(),
-                    label = { Text("Experience and services offered") },
-                    minLines = 4,
-                    enabled = !state.saving,
-                )
-                if (!pending)
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("Available for new requests")
-                        Switch(available, { available = it }, enabled = !state.saving)
-                    }
-                validation?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-                Button(
-                    {
-                        validation =
-                            if (
-                                name.trim().length < 2 ||
-                                    area.trim().length < 2 ||
-                                    category.isBlank()
-                            )
-                                "Add your professional name, category and service area."
-                            else null
-                        if (validation == null)
-                            vm.runAction { saveProfessional(name, category, area, bio, available) }
-                    },
-                    enabled = service != null && !state.saving,
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 50.dp),
-                ) {
-                    Text("Save professional profile")
-                }
-                OutlinedButton(
-                    onSignOut,
-                    enabled = !state.saving,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text("Sign out")
-                }
-            }
-        }
-    }
+    ProviderProfileScreens(
+        state = state,
+        pending = pending,
+        onRefresh = vm::refresh,
+        onBack = onBack,
+        onSaveProfile = { name, category, area, bio, available, done ->
+            vm.runAction(onSaved = done) { saveProfessional(name, category, area, bio, available) }
+        },
+        onSavePhoto = vm::saveProviderPhoto,
+        onCheckApproval = onCheckApproval,
+        onSignOut = onSignOut,
+        checkingApproval = checkingApproval,
+        approvalMessage = approvalMessage,
+        approvalError = approvalError,
+    )
 }
 
 @Composable

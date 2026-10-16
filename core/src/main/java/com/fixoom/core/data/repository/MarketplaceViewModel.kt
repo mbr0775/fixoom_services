@@ -58,7 +58,7 @@ class MarketplaceViewModel : ViewModel() {
         }
     }
 
-    fun runAction(action: suspend MarketplaceRepository.() -> Unit) {
+    fun runAction(onSaved: () -> Unit = {}, action: suspend MarketplaceRepository.() -> Unit) {
         if (mutable.value.saving) return
         mutable.value = mutable.value.copy(saving = true, error = null, notice = null)
         viewModelScope.launch {
@@ -66,6 +66,7 @@ class MarketplaceViewModel : ViewModel() {
                 withTimeout(20_000) { repository.action() }
                 mutable.value = mutable.value.copy(notice = "Changes saved.")
                 load()
+                if (mutable.value.error == null) onSaved()
             } catch (cancelled: CancellationException) {
                 if (cancelled is kotlinx.coroutines.TimeoutCancellationException)
                     mutable.value =
