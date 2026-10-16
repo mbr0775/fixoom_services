@@ -84,7 +84,10 @@ class ProviderProfileTest {
         compose.onAllNodes(hasSetTextAction()).assertCountEquals(0)
         compose.onAllNodesWithText("Test Professional").onFirst().assertIsDisplayed()
         compose.onNodeWithContentDescription("Edit profile").assertIsDisplayed()
+        compose.onNodeWithText("3/4 added").assertIsDisplayed()
         screenshot("overview")
+        compose.onNode(hasScrollToNodeAction()).performScrollToNode(hasText("Personal details"))
+        compose.onNodeWithText("Personal details").performClick()
         compose.onNodeWithText("provider@example.invalid").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("+94110000000").performScrollTo().assertIsDisplayed()
         compose.onNodeWithContentDescription("Edit profile").performClick()
@@ -219,6 +222,46 @@ class ProviderProfileTest {
             .onNode(hasScrollToNodeAction())
             .performScrollToNode(hasText("Check approval status"))
         compose.onNodeWithText("Check approval status").performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun missingDetailsShowHonestCompletionAndSectionsWorkWithoutMotion() {
+        compose.mainClock.autoAdvance = false
+        compose.setContent {
+            ProfileTestSurface {
+                ProviderProfileScreens(
+                    fixture.copy(
+                        data =
+                            fixture.data.copy(
+                                profile = fixture.data.profile!!.copy(phone = null),
+                                ownService = fixture.data.ownService!!.copy(bio = ""),
+                            )
+                    ),
+                    false,
+                    {},
+                    {},
+                    { _, _, _, _, _, _ -> },
+                    { _, _ -> },
+                    {},
+                    {},
+                    motionEnabled = false,
+                )
+            }
+        }
+        compose.onNodeWithText("1/4 added").assertIsDisplayed()
+        compose.onNode(hasScrollToNodeAction()).performScrollToNode(hasText("Personal details"))
+        compose.onNodeWithText("Personal details").performClick()
+        compose.mainClock.advanceTimeBy(32)
+        compose.onNodeWithText("No phone supplied").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Personal details").performScrollTo().performClick()
+        compose.mainClock.advanceTimeBy(32)
+        compose.onNodeWithText("No phone supplied").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Edit profile").performClick()
+        compose.mainClock.advanceTimeBy(32)
+        compose.onNodeWithText("Edit profile").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Back").performClick()
+        compose.mainClock.advanceTimeBy(32)
+        compose.onNodeWithText("My profile").assertIsDisplayed()
     }
 
     @Composable

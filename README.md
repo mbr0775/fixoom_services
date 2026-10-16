@@ -84,3 +84,5 @@ In the Provider app, open Profile → Add photo (or Change photo), choose an ima
 Photo-update validation: both debug apps built and were installed with app data preserved. All 48 unit tests, six provider screen checks, five rollback-only SQL permission suites and the admin browser suite passed. The real provider profile opens Android Photo Picker. No personal photo was chosen or uploaded by the agent; the user selects and saves their own image.
 
 Profile photo controls now use a tappable avatar and an Edit photo action sheet. Choose gallery or camera, position/zoom/rotate the circular preview, tap Use photo, then Save photo. View photo opens the existing image; Remove photo asks for confirmation. Cancel and Discard leave the saved photo unchanged.
+
+The provider My profile screen now has a portrait header with scroll-driven 3D parallax, expandable read-only detail sections, a saved-data essentials indicator and animated navigation into editing. Motion respects system animation settings and battery saver; all profile data still comes from the shared backend.
