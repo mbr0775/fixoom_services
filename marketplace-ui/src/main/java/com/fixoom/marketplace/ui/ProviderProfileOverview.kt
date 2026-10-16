@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.*
@@ -32,7 +33,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.fixoom.core.data.repository.MarketplaceState
 import com.fixoom.core.model.AccountStatus
 import com.fixoom.core.model.serviceStatus
@@ -145,76 +145,86 @@ internal fun ProviderProfileOverview(
             }
             item(key = "profile_sections_label") {
                 Text(
-                    "YOUR DETAILS",
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.5.sp,
+                    "Your details",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            item(key = "profile_personal") {
-                ProfileSection(
-                    "Personal details",
-                    "Name, email and phone",
-                    Icons.Rounded.PersonOutline,
-                    ProfileMint,
-                    personalAdded,
-                    motionEnabled,
+            item(key = "profile_details") {
+                Surface(
+                    shape = RoundedCornerShape(24.dp),
+                    color = MaterialTheme.colorScheme.surface,
+                    border = BorderStroke(1.dp, Color(0xFFE5ECEA)),
                 ) {
-                    ProfileDetail(
-                        "Full name",
-                        profile.fullName.orEmpty().ifBlank { "Not added yet" },
-                    )
-                    ProfileDetail(
-                        "Email address",
-                        profile.email.orEmpty().ifBlank { "No email supplied" },
-                    )
-                    ProfileDetail(
-                        "Phone number",
-                        profile.phone.orEmpty().ifBlank { "No phone supplied" },
-                    )
-                }
-            }
-            item(key = "profile_service") {
-                ProfileSection(
-                    "Service details",
-                    listOfNotNull(category, service?.serviceArea?.takeIf { it.isNotBlank() })
-                        .joinToString(" / ")
-                        .ifBlank { "Category, service area and availability" },
-                    Icons.Rounded.Handyman,
-                    ProfileLavender,
-                    serviceAdded,
-                    motionEnabled,
-                ) {
-                    ProfileDetail("Service category", category ?: "Not added yet")
-                    ProfileDetail(
-                        "Service area",
-                        service?.serviceArea.orEmpty().ifBlank { "Not added yet" },
-                    )
-                    ProfileDetail(
-                        "Availability",
-                        when {
-                            pending -> "Available after approval"
-                            !serviceAdded -> "Complete your service profile to set availability"
-                            service?.isAvailable == true -> "Available for new requests"
-                            else -> "Not accepting new requests"
-                        },
-                    )
-                }
-            }
-            item(key = "profile_about") {
-                ProfileSection(
-                    "About your work",
-                    service?.bio?.takeIf { it.isNotBlank() } ?: "Your experience and services",
-                    Icons.Rounded.Article,
-                    ProfilePeach,
-                    aboutAdded,
-                    motionEnabled,
-                ) {
-                    ProfileDetail(
-                        "Experience and services",
-                        service?.bio.orEmpty().ifBlank { "No description added yet" },
-                    )
+                    Column(Modifier.fillMaxWidth()) {
+                        ProfileSection(
+                            "Personal details",
+                            "Name, email and phone",
+                            ProfileDetailIcons.Contact,
+                            ProfileMint,
+                            personalAdded,
+                            motionEnabled,
+                        ) {
+                            ProfileDetail(
+                                "Full name",
+                                profile.fullName.orEmpty().ifBlank { "Not added yet" },
+                            )
+                            ProfileDetail(
+                                "Email address",
+                                profile.email.orEmpty().ifBlank { "No email supplied" },
+                            )
+                            ProfileDetail(
+                                "Phone number",
+                                profile.phone.orEmpty().ifBlank { "No phone supplied" },
+                            )
+                        }
+                        ProfileSectionDivider()
+                        ProfileSection(
+                            "Service details",
+                            listOfNotNull(
+                                    category,
+                                    service?.serviceArea?.takeIf { it.isNotBlank() },
+                                )
+                                .joinToString(" / ")
+                                .ifBlank { "Category, service area and availability" },
+                            ProfileDetailIcons.Services,
+                            ProfileLavender,
+                            serviceAdded,
+                            motionEnabled,
+                        ) {
+                            ProfileDetail("Service category", category ?: "Not added yet")
+                            ProfileDetail(
+                                "Service area",
+                                service?.serviceArea.orEmpty().ifBlank { "Not added yet" },
+                            )
+                            ProfileDetail(
+                                "Availability",
+                                when {
+                                    pending -> "Available after approval"
+                                    !serviceAdded ->
+                                        "Complete your service profile to set availability"
+                                    service?.isAvailable == true -> "Available for new requests"
+                                    else -> "Not accepting new requests"
+                                },
+                            )
+                        }
+                        ProfileSectionDivider()
+                        ProfileSection(
+                            "About your work",
+                            service?.bio?.takeIf { it.isNotBlank() }
+                                ?: "Your experience and services",
+                            ProfileDetailIcons.Introduction,
+                            ProfilePeach,
+                            aboutAdded,
+                            motionEnabled,
+                        ) {
+                            ProfileDetail(
+                                "Experience and services",
+                                service?.bio.orEmpty().ifBlank { "No description added yet" },
+                            )
+                        }
+                    }
                 }
             }
             item {
@@ -481,73 +491,102 @@ private fun ProfileSection(
             animationSpec = if (motionEnabled) tween(200) else snap(),
             label = "profile_section_chevron",
         )
-    Surface(
-        shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, Color(0xFFE3EBE9)),
-        shadowElevation = 1.dp,
-    ) {
-        Column(Modifier.fillMaxWidth()) {
-            Row(
-                Modifier.fillMaxWidth()
-                    .clickable(role = Role.Button) { expanded = !expanded }
-                    .semantics { stateDescription = if (expanded) "Expanded" else "Collapsed" }
-                    .padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                Surface(Modifier.size(42.dp), shape = RoundedCornerShape(14.dp), color = accent) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(icon, null, Modifier.size(21.dp), tint = ProfileTeal)
-                    }
+    Column(Modifier.fillMaxWidth()) {
+        Row(
+            Modifier.fillMaxWidth()
+                .clickable(role = Role.Button) { expanded = !expanded }
+                .semantics {
+                    stateDescription =
+                        (if (expanded) "Expanded" else "Collapsed") +
+                            if (added) ", details added" else ", details missing"
                 }
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(
-                        title,
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                    Text(
-                        subtitle,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-                Icon(
-                    if (added) Icons.Rounded.CheckCircle else Icons.Rounded.RadioButtonUnchecked,
-                    if (added) "Details added" else "Details missing",
-                    tint = if (added) ProfileTeal else MaterialTheme.colorScheme.outline,
-                    modifier = Modifier.size(16.dp),
+                .padding(horizontal = 18.dp, vertical = 18.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            ProfileSectionSymbol(icon, accent)
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                Text(
+                    title,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = ProfileInk,
                 )
+                Text(
+                    subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            Box(
+                Modifier.size(28.dp)
+                    .clip(CircleShape)
+                    .background(if (expanded) ProfileTeal else Color(0xFFF1F5F4)),
+                contentAlignment = Alignment.Center,
+            ) {
                 Icon(
                     Icons.AutoMirrored.Rounded.KeyboardArrowRight,
                     null,
-                    Modifier.size(18.dp).graphicsLayer { rotationZ = angle.value },
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    Modifier.size(17.dp).graphicsLayer { rotationZ = angle.value },
+                    tint = if (expanded) Color.White else ProfileTeal,
                 )
             }
-            val details: @Composable () -> Unit = {
-                Column(
-                    Modifier.fillMaxWidth().padding(start = 18.dp, end = 18.dp, bottom = 18.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp),
-                ) {
-                    HorizontalDivider(color = Color(0xFFE3EBE9))
-                    content()
-                }
+        }
+        val details: @Composable () -> Unit = {
+            Column(
+                Modifier.padding(start = 18.dp, end = 18.dp, bottom = 18.dp)
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(Color(0xFFF5F8F7))
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(18.dp),
+            ) {
+                content()
             }
-            if (motionEnabled) {
-                AnimatedVisibility(
-                    expanded,
-                    enter = expandVertically(tween(220)) + fadeIn(tween(180)),
-                    exit = shrinkVertically(tween(180)) + fadeOut(tween(120)),
-                ) {
-                    details()
+        }
+        if (motionEnabled) {
+            AnimatedVisibility(
+                expanded,
+                enter = expandVertically(tween(220)) + fadeIn(tween(180)),
+                exit = shrinkVertically(tween(180)) + fadeOut(tween(120)),
+            ) {
+                details()
+            }
+        } else if (expanded) details()
+    }
+}
+
+@Composable
+private fun ProfileSectionSymbol(icon: ImageVector, accent: Color) {
+    Box(Modifier.size(44.dp), contentAlignment = Alignment.Center) {
+        Box(
+            Modifier.size(37.dp)
+                .graphicsLayer {
+                    rotationZ = -9f
+                    translationY = 3.dp.toPx()
                 }
-            } else if (expanded) details()
+                .clip(RoundedCornerShape(12.dp))
+                .background(accent)
+        )
+        Surface(
+            Modifier.size(38.dp),
+            shape = RoundedCornerShape(12.dp),
+            color = accent.copy(alpha = .75f),
+            border = BorderStroke(1.dp, Color.White),
+            shadowElevation = 1.dp,
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(icon, null, Modifier.size(24.dp), tint = ProfileTeal)
+            }
         }
     }
+}
+
+@Composable
+private fun ProfileSectionDivider() {
+    HorizontalDivider(Modifier.padding(start = 76.dp, end = 18.dp), color = Color(0xFFEDF1F0))
 }
 
 @Composable
@@ -558,6 +597,13 @@ private fun ProfileDetail(label: String, value: String) {
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Text(value, style = MaterialTheme.typography.bodyLarge)
+        SelectionContainer {
+            Text(
+                value,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium,
+                color = ProfileInk,
+            )
+        }
     }
 }
