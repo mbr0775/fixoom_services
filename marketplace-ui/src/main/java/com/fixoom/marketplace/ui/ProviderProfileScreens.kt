@@ -29,6 +29,8 @@ fun ProviderProfileScreens(
     onRequestSkill: ((String, String, () -> Unit) -> Unit)? = null,
     onWithdrawSkill: ((String) -> Unit)? = null,
     onSaveLocation: ((Double?, Double?, Int) -> Unit)? = null,
+    onSupport: (() -> Unit)? = null,
+    onSaveAccount: ((String, String) -> Unit)? = null,
 ) {
     var page by rememberSaveable { mutableIntStateOf(0) }
     BackHandler(page != 0) { if (!state.saving) page = 0 }
@@ -64,6 +66,7 @@ fun ProviderProfileScreens(
                 },
                 onSavePhoto,
                 onSaveLocation,
+                onSaveAccount,
             )
         } else {
             ProviderProfileOverview(
@@ -79,6 +82,7 @@ fun ProviderProfileScreens(
                 approvalError,
                 motionEnabled,
                 if (onRequestSkill != null && onWithdrawSkill != null) ({ page = 2 }) else null,
+                onSupport,
             )
         }
     }
@@ -93,6 +97,7 @@ private fun ProviderProfileEditor(
     onSaveProfile: (String, String, String, String, Boolean) -> Unit,
     onSavePhoto: (ByteArray?, () -> Unit) -> Unit,
     onSaveLocation: ((Double?, Double?, Int) -> Unit)?,
+    onSaveAccount: ((String, String) -> Unit)?,
 ) {
     val service = state.data.ownService
     var name by rememberSaveable(service?.id) { mutableStateOf(service?.displayName.orEmpty()) }
@@ -102,7 +107,48 @@ private fun ProviderProfileEditor(
         rememberSaveable(service?.id) { mutableStateOf(service?.categorySlug.orEmpty()) }
     var available by rememberSaveable(service?.id) { mutableStateOf(service?.isAvailable ?: false) }
     var validation by remember { mutableStateOf<String?>(null) }
+    var contactName by
+        rememberSaveable(state.data.profile?.id) {
+            mutableStateOf(state.data.profile?.fullName.orEmpty())
+        }
+    var phone by
+        rememberSaveable(state.data.profile?.id) {
+            mutableStateOf(state.data.profile?.phone.orEmpty())
+        }
     MarketplacePage("Edit profile", state, onRefresh, onBack) {
+        if (onSaveAccount != null)
+            item {
+                InfoCard("Account contact", state.data.profile?.email.orEmpty()) {
+                    OutlinedTextField(
+                        contactName,
+                        { if (it.length <= 100) contactName = it },
+                        Modifier.fillMaxWidth(),
+                        label = { Text("Full name") },
+                        enabled = !state.saving,
+                    )
+                    OutlinedTextField(
+                        phone,
+                        { if (it.length <= 30) phone = it },
+                        Modifier.fillMaxWidth(),
+                        label = { Text("Phone number") },
+                        enabled = !state.saving,
+                        keyboardOptions =
+                            androidx.compose.foundation.text.KeyboardOptions(
+                                keyboardType = androidx.compose.ui.text.input.KeyboardType.Phone
+                            ),
+                    )
+                    Button(
+                        { onSaveAccount(contactName, phone) },
+                        enabled =
+                            !state.saving &&
+                                contactName.trim().length >= 2 &&
+                                (phone.isBlank() ||
+                                    com.fixoom.core.model.ContactPhone.normalize(phone) != null),
+                    ) {
+                        Text("Save contact details")
+                    }
+                }
+            }
         if (onSaveLocation != null)
             item {
                 ServiceCoverageControls(state.data.serviceLocation, state.saving, onSaveLocation)

@@ -102,11 +102,19 @@ class MarketplaceViewModel(
     }
 
     fun saveProviderPhoto(jpeg: ByteArray?, onSaved: () -> Unit = {}) {
+        savePhoto(jpeg, false, onSaved)
+    }
+
+    fun saveCustomerPhoto(jpeg: ByteArray?, onSaved: () -> Unit = {}) {
+        savePhoto(jpeg, true, onSaved)
+    }
+
+    private fun savePhoto(jpeg: ByteArray?, customer: Boolean, onSaved: () -> Unit) {
         if (mutable.value.saving) return
         mutable.value = mutable.value.copy(saving = true, error = null, notice = null)
         viewModelScope.launch {
             try {
-                val path = withTimeout(45_000) { ProviderPhotoRepository().save(jpeg) }
+                val path = withTimeout(45_000) { ProviderPhotoRepository(customer = customer).save(jpeg) }
                 val data = mutable.value.data
                 mutable.value =
                     mutable.value.copy(

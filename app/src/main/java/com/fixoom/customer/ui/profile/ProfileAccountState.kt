@@ -8,7 +8,7 @@ import java.util.Locale
 internal sealed interface ProfileAccountState {
     data object Loading : ProfileAccountState
     data object Guest : ProfileAccountState
-    data class SignedIn(val fullName: String?, val phone: String?) : ProfileAccountState
+    data class SignedIn(val fullName: String?, val phone: String?, val avatarPath: String? = null) : ProfileAccountState
     data object Unavailable : ProfileAccountState
 }
 
@@ -18,7 +18,8 @@ internal fun Profile?.toCustomerAccountState(): ProfileAccountState = when {
     role != AppRole.CUSTOMER || accountStatus != AccountStatus.ACTIVE -> ProfileAccountState.Unavailable
     else -> ProfileAccountState.SignedIn(
         fullName = fullName?.trim()?.takeIf(String::isNotBlank),
-        phone = phone?.trim()?.takeIf(String::isNotBlank)
+        phone = phone?.trim()?.takeIf(String::isNotBlank),
+        avatarPath = avatarUrl,
     )
 }
 

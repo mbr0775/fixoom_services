@@ -112,6 +112,7 @@ fun NavGraph(
             ConnectedNotifications(market, openBooking, openAccount, back)
         }
         composable("account") { ConnectedAccount(market, back) }
+        composable("support") { ConnectedSupport(market, onBack = back) }
         composable(Screen.Profile.route) {
             ProfileScreen(
                 isDarkMode,
@@ -119,6 +120,7 @@ fun NavGraph(
                 { navController.navigate(Screen.Bookings.route) },
                 { navController.navigate(Screen.Explore.route) },
                 onManageAccount = openAccount,
+                onSupport = { navController.navigate("support") },
             )
         }
         composable(

@@ -373,6 +373,7 @@ class MarketplaceRepository(private val client: SupabaseClient = FixoomSupabase.
     }
 
     suspend fun saveAccount(name: String, phone: String) {
+        require(name.trim().length in 2..100) { "Enter your full name (2–100 characters)." }
         val normalizedPhone = ContactPhone.normalize(phone)
         require(phone.isBlank() || normalizedPhone != null) { "Enter a valid phone number." }
         val id = client.auth.currentUserOrNull()?.id ?: error("Sign in required")

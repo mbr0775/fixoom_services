@@ -56,6 +56,7 @@ internal fun ProviderProfileOverview(
     approvalError: String?,
     motionEnabled: Boolean,
     onManageSkills: (() -> Unit)? = null,
+    onSupport: (() -> Unit)? = null,
 ) {
     val profile = state.data.profile
     val service = state.data.ownService
@@ -298,6 +299,9 @@ internal fun ProviderProfileOverview(
             }
         }
         item {
+            if (onSupport != null) OutlinedButton(onSupport, enabled = !state.saving, modifier = Modifier.fillMaxWidth()) {
+                Icon(Icons.Rounded.SupportAgent, null); Spacer(Modifier.width(8.dp)); Text("Help & complaints")
+            }
             OutlinedButton(onSignOut, enabled = !state.saving, modifier = Modifier.fillMaxWidth()) {
                 Text("Sign out")
             }

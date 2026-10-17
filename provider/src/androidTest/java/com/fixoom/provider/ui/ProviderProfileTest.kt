@@ -305,6 +305,60 @@ class ProviderProfileTest {
         }
     }
 
+    @Test
+    fun contactEditingValidatesPhoneAndSubmitsOnlyAfterSaveTap() {
+        var saved: Pair<String, String>? = null
+        compose.setContent {
+            ProfileTestSurface {
+                ProviderProfileScreens(
+                    fixture,
+                    false,
+                    {},
+                    {},
+                    { _, _, _, _, _, _ -> },
+                    { _, _ -> },
+                    {},
+                    {},
+                    motionEnabled = false,
+                    onSaveAccount = { name, phone -> saved = name to phone },
+                )
+            }
+        }
+        compose.onNodeWithContentDescription("Edit profile").performClick()
+        compose.onNodeWithText("Phone number").performTextReplacement("invalid")
+        compose.onNodeWithText("Save contact details").assertIsNotEnabled()
+        assertNull(saved)
+        compose.onNodeWithText("Phone number").performTextReplacement("0771234567")
+        compose.onNodeWithText("Full name").performTextReplacement("Updated Contact")
+        compose.onNodeWithText("Save contact details").assertIsEnabled().performClick()
+        assertEquals("Updated Contact" to "0771234567", saved)
+    }
+
+    @Test
+    fun helpOpensOnlyAfterTheProviderRequestsIt() {
+        var opened = false
+        compose.setContent {
+            ProfileTestSurface {
+                ProviderProfileScreens(
+                    fixture,
+                    false,
+                    {},
+                    {},
+                    { _, _, _, _, _, _ -> },
+                    { _, _ -> },
+                    {},
+                    {},
+                    motionEnabled = false,
+                    onSupport = { opened = true },
+                )
+            }
+        }
+        assertFalse(opened)
+        compose.onNode(hasScrollToNodeAction()).performScrollToNode(hasText("Help & complaints"))
+        compose.onNodeWithText("Help & complaints").performClick()
+        assertTrue(opened)
+    }
+
     private fun screenshot(name: String) {
         compose.waitForIdle()
         val automation = InstrumentationRegistry.getInstrumentation().uiAutomation

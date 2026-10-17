@@ -42,12 +42,13 @@ fun ProviderPhoto(
     name: String,
     modifier: Modifier = Modifier,
     preview: ByteArray? = null,
+    customer: Boolean = false,
 ) {
     var retry by remember(path) { mutableIntStateOf(0) }
     var failed by remember(path, preview, retry) { mutableStateOf(false) }
     var loading by remember(path, preview, retry) { mutableStateOf(false) }
     val image by
-        produceState<ImageBitmap?>(null, path, preview, retry) {
+        produceState<ImageBitmap?>(null, path, preview, retry, customer) {
             value = null
             failed = false
             if (preview != null || path != null) {
@@ -56,13 +57,13 @@ fun ProviderPhoto(
                     value =
                         withContext(Dispatchers.IO) {
                             if (preview == null && path != null)
-                                photoCache.get(path)?.let {
+                                photoCache.get("$customer/$path")?.let {
                                     return@withContext it
                                 }
                             val bytes =
                                 preview
                                     ?: withTimeout(15_000) {
-                                        ProviderPhotoRepository().download(path!!)
+                                        ProviderPhotoRepository(customer = customer).download(path!!)
                                     }
                             require(bytes.size <= ProviderPhotoRepository.MAX_BYTES)
                             val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
@@ -71,7 +72,7 @@ fun ProviderPhoto(
                             val bitmap =
                                 requireNotNull(BitmapFactory.decodeByteArray(bytes, 0, bytes.size))
                                     .asImageBitmap()
-                            if (preview == null && path != null) photoCache.put(path, bitmap)
+                            if (preview == null && path != null) photoCache.put("$customer/$path", bitmap)
                             bitmap
                         }
                 } catch (cancelled: CancellationException) {

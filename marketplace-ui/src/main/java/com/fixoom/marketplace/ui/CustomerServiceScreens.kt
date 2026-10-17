@@ -187,7 +187,15 @@ fun ConnectedBookingForm(
         vm.dismissNotice()
         validation = null
     }
-    MarketplacePage("Request a service", state, { vm.refresh(); if (customer) refreshAvailability() }, onBack) {
+    MarketplacePage(
+        "Request a service",
+        state,
+        {
+            vm.refresh()
+            if (customer) refreshAvailability()
+        },
+        onBack,
+    ) {
         if (!customer)
             item {
                 InfoCard(
@@ -347,7 +355,7 @@ fun ConnectedBookingForm(
                     )
                     validation?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                     Text(
-                        "Times are shown in Sri Lanka time. Your provider must accept the request before the job is confirmed.",
+                        "Times are shown in Sri Lanka time. Your provider must accept the request before the job is confirmed. After sending, add problem photos or videos from the booking details screen.",
                         style = MaterialTheme.typography.bodySmall,
                     )
                     Button(
@@ -407,12 +415,24 @@ fun ConnectedAccount(vm: MarketplaceViewModel, onBack: () -> Unit) {
     var password by remember { mutableStateOf("") }
     var visible by remember { mutableStateOf(false) }
     var validation by remember { mutableStateOf<String?>(null) }
+    var editing by rememberSaveable(profile?.id) { mutableStateOf(false) }
+    var support by rememberSaveable(profile?.id) { mutableStateOf(false) }
+    if (support) {
+        ConnectedSupport(vm, onBack = { support = false })
+        return
+    }
+    androidx.activity.compose.BackHandler(editing) { if (!state.saving) editing = false }
     LaunchedEffect(profile?.id) { if (profile != null) password = "" }
     MarketplacePage(
-        if (profile == null) "Your Fixoom account" else "Account details",
+        if (profile == null) "Your Fixoom account"
+        else if (editing) "Edit account" else "Account details",
         state,
         vm::refresh,
-        onBack,
+        {
+            if (editing) {
+                if (!state.saving) editing = false
+            } else onBack()
+        },
     ) {
         if (profile == null) {
             item {
@@ -506,12 +526,52 @@ fun ConnectedAccount(vm: MarketplaceViewModel, onBack: () -> Unit) {
             }
         } else {
             item {
+                if (editing)
+                    ProviderPhotoEditor(
+                        profile.avatarUrl,
+                        profile.fullName.orEmpty(),
+                        state.saving,
+                        vm::saveCustomerPhoto,
+                        customer = true,
+                    )
+                else
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+                        ProviderPhoto(
+                            profile.avatarUrl,
+                            profile.fullName.orEmpty(),
+                            Modifier.size(104.dp),
+                            customer = true,
+                        )
+                    }
+            }
+            item {
                 InfoCard(
                     profile.fullName.orEmpty(),
                     "${profile.role.name.lowercase()} · ${profile.accountStatus.name.lowercase()}",
                 )
             }
-            if (profile.role == AppRole.CUSTOMER && profile.accountStatus == AccountStatus.ACTIVE)
+            if (!editing)
+                item {
+                    InfoCard(
+                        "Your details",
+                        "${profile.fullName.orEmpty()}\n${profile.email.orEmpty()}\n${profile.phone ?: "No phone supplied"}",
+                    ) {
+                        Button({
+                            name = profile.fullName.orEmpty()
+                            phone = profile.phone.orEmpty()
+                            validation = null
+                            editing = true
+                        }) {
+                            Text("Edit profile")
+                        }
+                        OutlinedButton({ support = true }) { Text("Help & complaints") }
+                    }
+                }
+            if (
+                editing &&
+                    profile.role == AppRole.CUSTOMER &&
+                    profile.accountStatus == AccountStatus.ACTIVE
+            )
                 item {
                     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                         OutlinedTextField(
@@ -535,7 +595,9 @@ fun ConnectedAccount(vm: MarketplaceViewModel, onBack: () -> Unit) {
                                     name.trim().length >= 2 &&
                                         (phone.isBlank() || ContactPhone.normalize(phone) != null)
                                 )
-                                    vm.runAction { saveAccount(name, phone) }
+                                    vm.runAction(onSaved = { editing = false }) {
+                                        saveAccount(name, phone)
+                                    }
                                 else validation = "Check your name and phone number."
                             },
                             enabled = !state.saving,

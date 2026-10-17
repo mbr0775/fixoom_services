@@ -43,6 +43,15 @@ class ProviderPhotoRepositoryTest {
     }
 
     @Test
+    fun customerReplacementUsesPrivateCustomerBucketAndValidatedCustomerRpc() = runBlocking {
+        withClient(customer = true) { repository, events, published ->
+            val path = repository.save(jpeg)
+            assertEquals(path, published.single())
+            assertEquals(listOf("profile", "upload", "publish", "delete"), events)
+        }
+    }
+
+    @Test
     fun failedPublicationDoesNotDeleteEitherPotentiallyReferencedObject() = runBlocking {
         withClient(failPublish = true) { repository, events, _ ->
             try {
@@ -69,6 +78,7 @@ class ProviderPhotoRepositoryTest {
 
     private suspend fun withClient(
         failPublish: Boolean = false,
+        customer: Boolean = false,
         test: suspend (ProviderPhotoRepository, MutableList<String>, MutableList<String?>) -> Unit,
     ) {
         val events = mutableListOf<String>()
@@ -77,11 +87,11 @@ class ProviderPhotoRepositoryTest {
             val path = request.url.encodedPath
             val headers = headersOf(HttpHeaders.ContentType, "application/json")
             when {
-                path == "/rest/v1/provider_profiles" -> {
+                path == "/rest/v1/${if (customer) "profiles" else "provider_profiles"}" -> {
                     events.add("profile")
                     respond("""[{"id":"$id","avatar_path":"$old"}]""", HttpStatusCode.OK, headers)
                 }
-                path == "/rest/v1/rpc/set_provider_photo" -> {
+                path == "/rest/v1/rpc/${if (customer) "set_customer_photo" else "set_provider_photo"}" -> {
                     events.add("publish")
                     val data =
                         (request.body as OutgoingContent.ByteArrayContent).bytes().decodeToString()
@@ -98,12 +108,12 @@ class ProviderPhotoRepositoryTest {
                     )
                 }
                 request.method == HttpMethod.Post &&
-                    path.startsWith("/storage/v1/object/provider-photos/$id/") -> {
+                    path.startsWith("/storage/v1/object/${if (customer) "customer-photos" else "provider-photos"}/$id/") -> {
                     events.add("upload")
                     respond("""{"Key":"uploaded","Id":"30000000-0000-4000-8000-000000000003"}""", HttpStatusCode.OK, headers)
                 }
                 request.method == HttpMethod.Delete &&
-                    path == "/storage/v1/object/provider-photos" -> {
+                    path == "/storage/v1/object/${if (customer) "customer-photos" else "provider-photos"}" -> {
                     events.add("delete")
                     respond("[]", HttpStatusCode.OK, headers)
                 }
@@ -137,7 +147,7 @@ class ProviderPhotoRepositoryTest {
                 ),
                 autoRefresh = false,
             )
-            test(ProviderPhotoRepository(client), events, published)
+            test(ProviderPhotoRepository(client, customer), events, published)
         } finally {
             client.close()
         }

@@ -21,6 +21,10 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Fixoom_Services">
 
+        <provider android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.profilephotos" android:exported="false" android:grantUriPermissions="true">
+            <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/profile_photo_paths" />
+        </provider>
         <service android:name="com.fixoom.core.data.notifications.FixoomMessagingService" android:exported="false">
             <intent-filter><action android:name="com.google.firebase.MESSAGING_EVENT" /></intent-filter>
         </service>

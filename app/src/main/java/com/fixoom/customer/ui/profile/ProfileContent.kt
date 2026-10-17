@@ -300,6 +300,8 @@ private fun IdentityCard(
                         val initials = profileInitials(signedIn?.fullName)
                         if (account == ProfileAccountState.Loading) {
                             CircularProgressIndicator(Modifier.size(26.dp), color = FixoomMint, strokeWidth = 2.dp)
+                        } else if (signedIn?.avatarPath != null) {
+                            com.fixoom.marketplace.ui.ProviderPhoto(signedIn.avatarPath, signedIn.fullName.orEmpty(), Modifier.size(64.dp), customer = true)
                         } else if (initials.isNotEmpty()) {
                             Text(initials, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = FixoomMint)
                         } else {

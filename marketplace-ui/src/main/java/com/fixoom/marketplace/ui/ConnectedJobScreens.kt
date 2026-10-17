@@ -179,6 +179,11 @@ fun ConnectedBookingDetails(
     var amount by remember { mutableStateOf("") }
     var amountError by remember { mutableStateOf(false) }
     val booking = current.booking
+    var support by rememberSaveable(id) { mutableStateOf(false) }
+    if (support) {
+        ConnectedSupport(vm, id) { support = false }
+        return
+    }
     MarketplacePage(
         if (confirmation) "Request sent" else booking?.reference ?: "Booking details",
         state.copy(loading = state.loading || current.loading),
@@ -297,6 +302,14 @@ fun ConnectedBookingDetails(
                             style = MaterialTheme.typography.bodySmall,
                         )
                     }
+                }
+            }
+            item { ServiceEvidencePanel(id) }
+            item {
+                OutlinedButton({ support = true }, modifier = Modifier.fillMaxWidth()) {
+                    Icon(Icons.Rounded.SupportAgent, null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Report an issue privately")
                 }
             }
             item { Text("Conversation", style = MaterialTheme.typography.titleLarge) }
@@ -443,6 +456,11 @@ fun ConnectedProviderProfile(
     approvalError: String? = null,
 ) {
     val state by vm.state.collectAsStateWithLifecycle()
+    var support by rememberSaveable { mutableStateOf(false) }
+    if (support) {
+        ConnectedSupport(vm, onBack = { support = false })
+        return
+    }
     ProviderProfileScreens(
         state = state,
         pending = pending,
@@ -452,6 +470,8 @@ fun ConnectedProviderProfile(
             vm.runAction(onSaved = done) { saveProfessional(name, category, area, bio, available) }
         },
         onSavePhoto = vm::saveProviderPhoto,
+        onSupport = { support = true },
+        onSaveAccount = { name, phone -> vm.runAction { saveAccount(name, phone) } },
         onCheckApproval = onCheckApproval,
         onSignOut = onSignOut,
         checkingApproval = checkingApproval,

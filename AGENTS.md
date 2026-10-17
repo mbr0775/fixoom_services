@@ -9,6 +9,7 @@
 - Do not create or switch to another Supabase project unless the user explicitly changes this requirement. Shared migrations/tests belong in `platform/database`; these extend the existing project baseline.
 - Never commit real keys/passwords or include service-role credentials in a client. The public project URL is safe in configuration examples.
 - Build both apps after changes to shared modules. See `docs/CONNECTED_WORKFLOW.md` for setup, verification and release limitations.
+- Preserve the user's installed app data when testing on Honor. Do not run `connectedDebugAndroidTest` on that phone: its cleanup uninstalls the target app. Build AndroidTest APKs, install with `adb install -r`, and invoke selected isolated tests with `adb shell am instrument`. Do not uninstall or clear either real app. Leave both normal APKs installed afterward.
 
 ## Production requirement — no demo behavior
 

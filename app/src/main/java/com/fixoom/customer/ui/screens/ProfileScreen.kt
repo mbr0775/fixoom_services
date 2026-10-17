@@ -42,7 +42,8 @@ fun ProfileScreen(
     onDarkModeChange: (Boolean) -> Unit,
     onBookingsClick: () -> Unit,
     onExploreClick: () -> Unit,
-    onManageAccount: () -> Unit = {}
+    onManageAccount: () -> Unit = {},
+    onSupport: (() -> Unit)? = null,
 ) {
     val accountViewModel: CustomerProfileViewModel = viewModel()
     val account by accountViewModel.state.collectAsStateWithLifecycle()
@@ -94,7 +95,7 @@ fun ProfileScreen(
             onNotifications = { showSettings(true) },
             onPermissions = { showSettings(false) },
             onAccountDetails = onManageAccount,
-            onHelp = { panel = ProfilePanel.HELP },
+            onHelp = { if (onSupport != null) onSupport() else panel = ProfilePanel.HELP },
             onAbout = { panel = ProfilePanel.ABOUT },
             onRetry = accountViewModel::refresh
         )

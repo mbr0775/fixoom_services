@@ -15,20 +15,23 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
-class ProviderPhotoRepository(private val client: SupabaseClient = FixoomSupabase.client) {
+class ProviderPhotoRepository(
+    private val client: SupabaseClient = FixoomSupabase.client,
+    private val customer: Boolean = false,
+) {
     suspend fun save(jpeg: ByteArray?): String? {
         require(jpeg == null || isValidUpload(jpeg)) { "Choose a JPEG photo smaller than 1 MB." }
         client.auth.awaitInitialization()
         val user = client.auth.currentUserOrNull() ?: error("Sign in required")
         val previous =
             client
-                .from("provider_profiles")
+                .from(if (customer) "profiles" else "provider_profiles")
                 .select { filter { eq("id", user.id) } }
                 .decodeList<ServiceProfessional>()
                 .firstOrNull()
                 ?.avatarPath
         val path = jpeg?.let { "${user.id}/${UUID.randomUUID()}.jpg" }
-        val bucket = client.storage.from(BUCKET)
+        val bucket = client.storage.from(if (customer) CUSTOMER_BUCKET else BUCKET)
         if (path != null)
             bucket.upload(path, jpeg!!) {
                 contentType = ContentType.Image.JPEG
@@ -37,7 +40,7 @@ class ProviderPhotoRepository(private val client: SupabaseClient = FixoomSupabas
         // Do not delete the new object if an RPC response is lost: the commit may
         // already have succeeded. A subsequent refresh resolves the saved path.
         client.postgrest.rpc(
-            "set_provider_photo",
+            if (customer) "set_customer_photo" else "set_provider_photo",
             buildJsonObject {
                 put("p_avatar_path", path?.let(::JsonPrimitive) ?: JsonNull)
             },
@@ -56,11 +59,12 @@ class ProviderPhotoRepository(private val client: SupabaseClient = FixoomSupabas
 
     suspend fun download(path: String): ByteArray {
         require(PATH.matches(path)) { "Invalid photo path" }
-        return client.storage.from(BUCKET).downloadAuthenticated(path)
+        return client.storage.from(if (customer) CUSTOMER_BUCKET else BUCKET).downloadAuthenticated(path)
     }
 
     companion object {
         const val BUCKET = "provider-photos"
+        const val CUSTOMER_BUCKET = "customer-photos"
         const val MAX_BYTES = 1_048_576
         private val PATH = Regex("[0-9a-f-]{36}/[0-9a-f-]{36}\\.jpg")
 

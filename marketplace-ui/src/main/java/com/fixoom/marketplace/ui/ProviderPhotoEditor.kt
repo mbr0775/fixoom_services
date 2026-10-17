@@ -41,6 +41,16 @@ fun ProviderPhotoEditor(
     name: String,
     busy: Boolean,
     onSave: (ByteArray?, () -> Unit) -> Unit,
+) = ProviderPhotoEditor(path, name, busy, onSave, customer = false)
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ProviderPhotoEditor(
+    path: String?,
+    name: String,
+    busy: Boolean,
+    onSave: (ByteArray?, () -> Unit) -> Unit,
+    customer: Boolean,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -135,7 +145,7 @@ fun ProviderPhotoEditor(
                     border = BorderStroke(2.dp, MaterialTheme.colorScheme.outlineVariant),
                 ) {
                     Box(Modifier.padding(5.dp), contentAlignment = Alignment.Center) {
-                        ProviderPhoto(path, name, Modifier.size(114.dp), draft)
+                        ProviderPhoto(path, name, Modifier.size(114.dp), draft, customer)
                     }
                 }
                 Surface(
@@ -309,6 +319,7 @@ fun ProviderPhotoEditor(
                             .fillMaxWidth()
                             .aspectRatio(1f),
                         draft,
+                        customer,
                     )
                     TextButton({ viewing = false }) { Text("Close") }
                 }
