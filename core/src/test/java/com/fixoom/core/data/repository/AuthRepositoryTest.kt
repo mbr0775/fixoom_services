@@ -56,9 +56,33 @@ class AuthRepositoryTest {
                             PASSWORD,
                             AppRole.PROVIDER,
                             skills = listOf("plumbing", "carpentry", "plumbing"),
+                            skillDescriptions =
+                                mapOf(
+                                    "plumbing" to "  Pipe repairs and plumbing installation.  ",
+                                    "carpentry" to "Furniture repairs and fitted shelves.",
+                                ),
                         ),
                 )
             }
+    }
+
+    @Test
+    fun selectedSkillsNeedDescriptionsBeforeSignupIsSent() = runBlocking {
+        fixture().useClient { client, requests ->
+            val result =
+                AuthRepository(client)
+                    .register(
+                        "Fixture Provider",
+                        EMAIL,
+                        "0771234567",
+                        PASSWORD,
+                        AppRole.PROVIDER,
+                        listOf("plumbing"),
+                        mapOf("plumbing" to "23"),
+                    )
+            assertTrue(result is AuthResult.Error)
+            assertTrue(requests.isEmpty())
+        }
     }
 
     @Test
@@ -227,6 +251,14 @@ class AuthRepositoryTest {
                         data["skill_categories"]!!.jsonArray.map { it.jsonPrimitive.content },
                     )
                     assertNull(data["approved_categories"])
+                    assertEquals(
+                        "Pipe repairs and plumbing installation.",
+                        data["skill_descriptions"]!!.jsonObject["plumbing"]!!.jsonPrimitive.content,
+                    )
+                    assertEquals(
+                        "Furniture repairs and fitted shelves.",
+                        data["skill_descriptions"]!!.jsonObject["carpentry"]!!.jsonPrimitive.content,
+                    )
                 }
                 signupPhone?.let {
                     val body =

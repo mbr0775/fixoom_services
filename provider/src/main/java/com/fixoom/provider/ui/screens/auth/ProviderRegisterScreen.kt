@@ -49,6 +49,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -70,6 +71,7 @@ fun ProviderRegisterScreen(
             phone: String,
             password: String,
             skills: List<String>,
+            skillDescriptions: Map<String, String>,
         ) -> Unit,
     onSignIn: () -> Unit,
     onOpenTerms: () -> Unit,
@@ -81,6 +83,8 @@ fun ProviderRegisterScreen(
     onRetryCategories: () -> Unit = {},
 ) {
     var selectedSkills by rememberSaveable { mutableStateOf(listOf<String>()) }
+    var skillDescriptions by rememberSaveable { mutableStateOf(mapOf<String, String>()) }
+    val focus = LocalFocusManager.current
     val scroll = rememberScrollState()
     var fullName by rememberSaveable {
         mutableStateOf("")
@@ -128,6 +132,7 @@ fun ProviderRegisterScreen(
             confirmPassword.isNotBlank() &&
             acceptedPolicies &&
             selectedSkills.isNotEmpty() &&
+            selectedSkills.all { skillDescriptions[it]?.trim()?.length in 10..2000 } &&
             !uiState.isLoading
 
     fun submitRegistration() {
@@ -144,6 +149,8 @@ fun ProviderRegisterScreen(
                 password != confirmPassword -> "Passwords do not match."
 
                 selectedSkills.isEmpty() -> "Choose at least one service skill."
+                selectedSkills.any { skillDescriptions[it]?.trim()?.length !in 10..2000 } ->
+                    "Describe your experience and services for every selected skill (10–2,000 characters)."
                 !acceptedPolicies -> "Please accept the Terms and Privacy Policy."
 
                 else -> null
@@ -156,6 +163,7 @@ fun ProviderRegisterScreen(
                 phone.trim(),
                 password,
                 selectedSkills,
+                skillDescriptions.filterKeys { it in selectedSkills },
             )
         }
     }
@@ -197,7 +205,7 @@ fun ProviderRegisterScreen(
             ProviderDepthHero(
                 "Make your skills\nwork for you.",
                 "JOIN FIXOOM",
-                "Create your account, verify your email, then complete your service offerings for administrator review.",
+                "Describe your services, create your account and verify your email. Your account and offerings are reviewed separately.",
                 { scroll.value.toFloat() },
                 compact = true,
             )
@@ -398,7 +406,7 @@ fun ProviderRegisterScreen(
                 fontWeight = FontWeight.Bold,
             )
             Text(
-                "Select every service you offer. Your account and each skill need administrator approval before customers can book you.",
+                "Select up to 12 services and describe your experience for each. Your account and each skill need administrator approval before customers can book you.",
                 style = MaterialTheme.typography.bodyMedium,
             )
             if (categoryError != null) {
@@ -418,10 +426,40 @@ fun ProviderRegisterScreen(
                                 else selectedSkills + category.slug
                         },
                         label = { Text(category.name) },
-                        enabled = !uiState.isLoading,
+                        enabled =
+                            !uiState.isLoading &&
+                                (category.slug in selectedSkills || selectedSkills.size < 12),
                     )
                 }
             }
+            categories
+                .filter { it.slug in selectedSkills }
+                .forEach { category ->
+                    val description = skillDescriptions[category.slug].orEmpty()
+                    Spacer(Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = description,
+                        onValueChange = {
+                            if (it.length <= 2000)
+                                skillDescriptions = skillDescriptions + (category.slug to it)
+                            localError = null
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("${category.name} experience and services") },
+                        supportingText = {
+                            Text(
+                                "Describe work you can do and your experience. ${description.trim().length}/2,000 characters · at least 10"
+                            )
+                        },
+                        minLines = 3,
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                        keyboardActions = KeyboardActions(onDone = { focus.clearFocus() }),
+                        isError = description.isNotEmpty() && description.trim().length < 10,
+                        enabled = !uiState.isLoading,
+                        shape = RoundedCornerShape(18.dp),
+                        colors = providerRegisterFieldColors(),
+                    )
+                }
             Spacer(Modifier.height(16.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),

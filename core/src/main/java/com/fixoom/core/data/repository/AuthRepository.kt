@@ -31,10 +31,22 @@ class AuthRepository(private val client: SupabaseClient = FixoomSupabase.client)
         password: String,
         role: AppRole,
         skills: List<String> = emptyList(),
+        skillDescriptions: Map<String, String> = emptyMap(),
     ): AuthResult {
         val cleanName = fullName.trim()
         val cleanEmail = email.trim().lowercase()
         val cleanPhone = ContactPhone.normalize(phone)
+        val cleanSkills = skills.distinct()
+        if (
+            role == AppRole.PROVIDER &&
+                (cleanSkills.size > 12 ||
+                    cleanSkills.any {
+                        skillDescriptions[it]?.trim()?.length !in 10..2000
+                    })
+        )
+            return AuthResult.Error(
+                "Describe the experience and services you offer for each selected skill (10–2,000 characters). Choose up to 12 skills."
+            )
         if (phone.isNotBlank() && cleanPhone == null)
             return AuthResult.Error(
                 "Enter a valid phone number, such as 0771234567 or +94771234567."
@@ -72,7 +84,16 @@ class AuthRepository(private val client: SupabaseClient = FixoomSupabase.client)
                         if (role == AppRole.PROVIDER)
                             put(
                                 "skill_categories",
-                                JsonArray(skills.distinct().take(12).map(::JsonPrimitive)),
+                                JsonArray(cleanSkills.map(::JsonPrimitive)),
+                            )
+                        if (role == AppRole.PROVIDER)
+                            put(
+                                "skill_descriptions",
+                                buildJsonObject {
+                                    cleanSkills.forEach { slug ->
+                                        put(slug, skillDescriptions.getValue(slug).trim())
+                                    }
+                                },
                             )
 
                         if (cleanPhone != null) {

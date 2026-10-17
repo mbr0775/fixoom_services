@@ -123,7 +123,7 @@ fun ProviderSkillsScreen(
             InfoCard(
                 category,
                 skill.description.ifBlank {
-                    "Add your experience and service details before this skill can be approved."
+                    "No experience or service details supplied yet. Use Update request to help the administrator review this skill."
                 },
             ) {
                 Text(
@@ -131,6 +131,12 @@ fun ProviderSkillsScreen(
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.SemiBold,
                 )
+                if (skill.status != "approved" && skill.description.trim().length < 10)
+                    Text(
+                        "Help your administrator review this service: use Update request to add at least 10 characters about your experience and services.",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
                 if (skill.status == "approved") {
                     if (state.data.ownService?.categorySlug == skill.categorySlug)
                         Text("Primary skill", style = MaterialTheme.typography.labelMedium)

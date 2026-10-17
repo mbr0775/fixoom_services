@@ -50,11 +50,15 @@ class ProviderSkillsTest {
     @Test
     fun registrationSendsMultipleSelectedSkillsForReview() {
         var selected: List<String>? = null
+        var descriptions: Map<String, String>? = null
         compose.setContent {
             Fixoom_ServicesTheme {
                 ProviderRegisterScreen(
                     ProviderAuthUiState(isLoading = false),
-                    { _, _, _, _, skills -> selected = skills },
+                    { _, _, _, _, skills, details ->
+                        selected = skills
+                        descriptions = details
+                    },
                     {},
                     {},
                     {},
@@ -79,8 +83,40 @@ class ProviderSkillsTest {
         compose.onNodeWithText("Plumbing").performScrollTo().performClick()
         compose.onNodeWithText("Carpentry").performScrollTo().performClick()
         compose.onNode(isToggleable()).performScrollTo().performClick()
+        compose
+            .onNodeWithText("Create account", substring = false)
+            .performScrollTo()
+            .assertIsNotEnabled()
+        compose
+            .onNode(hasSetTextAction() and hasText("Plumbing experience and services"))
+            .performScrollTo()
+            .performTextInput("23")
+        compose
+            .onNodeWithText("Create account", substring = false)
+            .performScrollTo()
+            .assertIsNotEnabled()
+        compose
+            .onNode(hasSetTextAction() and hasText("Plumbing experience and services"))
+            .performScrollTo()
+            .performTextReplacement("Pipe repairs and plumbing installation.")
+        compose
+            .onNode(hasSetTextAction() and hasText("Carpentry experience and services"))
+            .performScrollTo()
+            .performTextInput("Furniture repairs and fitted shelves.")
+        compose
+            .onNode(hasSetTextAction() and hasText("Carpentry experience and services"))
+            .performImeAction()
         compose.onNodeWithText("Create account", substring = false).performScrollTo().performClick()
-        compose.runOnIdle { assertEquals(listOf("plumbing", "carpentry"), selected) }
+        compose.runOnIdle {
+            assertEquals(listOf("plumbing", "carpentry"), selected)
+            assertEquals(
+                mapOf(
+                    "plumbing" to "Pipe repairs and plumbing installation.",
+                    "carpentry" to "Furniture repairs and fitted shelves.",
+                ),
+                descriptions,
+            )
+        }
     }
 
     @Test

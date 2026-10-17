@@ -129,6 +129,7 @@ class ProviderAuthViewModel(private val authRepository: AuthRepository = AuthRep
         phone: String,
         password: String,
         skills: List<String>,
+        skillDescriptions: Map<String, String>,
     ) {
         executeAuthRequest {
             authRepository.register(
@@ -138,6 +139,7 @@ class ProviderAuthViewModel(private val authRepository: AuthRepository = AuthRep
                 password = password,
                 role = AppRole.PROVIDER,
                 skills = skills,
+                skillDescriptions = skillDescriptions,
             )
         }
     }
