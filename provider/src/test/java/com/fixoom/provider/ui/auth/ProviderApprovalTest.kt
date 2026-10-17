@@ -68,6 +68,23 @@ class ProviderApprovalTest {
         }
     }
 
+    @Test
+    fun logoutKeepsAuthenticatedRouteUntilSessionIsCleared() = runBlocking {
+        fixture { vm, status ->
+            status.set("active")
+            vm.checkApprovalStatus()
+            withTimeout(5_000) { vm.uiState.first { it.result is AuthResult.Authenticated } }
+            vm.signOut()
+            val loading = withTimeout(5_000) { vm.uiState.first { it.isLoading } }
+            assertTrue(
+                "Navigation must not launch restoreSession during logout",
+                loading.result is AuthResult.Authenticated,
+            )
+            withTimeout(5_000) { vm.uiState.first { it.result == AuthResult.SignedOut } }
+            assertFalse(vm.uiState.value.isLoading)
+        }
+    }
+
     private suspend fun fixture(
         block: suspend (ProviderAuthViewModel, AtomicReference<String>) -> Unit
     ) {
@@ -77,6 +94,13 @@ class ProviderApprovalTest {
         val client =
             createSupabaseClient("https://fixoom-approval.invalid", "fixture-public-key") {
                 httpEngine = MockEngine { request ->
+                    if (request.url.encodedPath == "/auth/v1/logout") {
+                        delay(200)
+                        return@MockEngine respond(
+                            "{}",
+                            headers = headersOf(HttpHeaders.ContentType, "application/json"),
+                        )
+                    }
                     check(request.url.encodedPath == "/rest/v1/profiles")
                     if (status.get() == "offline")
                         respond(

@@ -32,6 +32,8 @@ object PushMessaging {
     private val mutable = MutableStateFlow(PushState())
     val state = mutable.asStateFlow()
     private var appContext: Context? = null
+    private var registrationJob: Job? = null
+    @Volatile private var signingOut = false
 
     fun initialize(context: Context) {
         appContext = context.applicationContext
@@ -47,12 +49,21 @@ object PushMessaging {
                 )
             )
         mutable.value = PushState(configured = true)
-        scope.launch { FixoomSupabase.client.auth.sessionStatus.collectLatest { refresh(context) } }
+        scope.launch {
+            FixoomSupabase.client.auth.sessionStatus.collectLatest {
+                if (FixoomSupabase.client.auth.currentSessionOrNull() == null) {
+                    registrationJob?.cancel()
+                    signingOut = false
+                    mutable.value = PushState(configured = true)
+                } else refresh(context)
+            }
+        }
     }
 
     fun refresh(context: Context) {
-        if (!mutable.value.configured) return
-        scope.launch {
+        if (!mutable.value.configured || signingOut) return
+        registrationJob?.cancel()
+        registrationJob = scope.launch {
             if (
                 Build.VERSION.SDK_INT >= 33 &&
                     ContextCompat.checkSelfPermission(
@@ -68,6 +79,7 @@ object PushMessaging {
                     val role = context.packageName.substringAfterLast('.')
                     if (role != profile.role.name.lowercase()) return@withTimeout
                     val token = FirebaseMessaging.getInstance().token.await()
+                    if (signingOut) return@withTimeout
                     FixoomSupabase.client.postgrest.rpc(
                         "register_push_device",
                         buildJsonObject {
@@ -108,16 +120,22 @@ object PushMessaging {
     suspend fun beforeSignOut() {
         val context = appContext ?: return
         if (!mutable.value.configured) return
-        withTimeoutOrNull(4_000) {
-            runCatching {
-                FixoomSupabase.client.postgrest.rpc(
-                    "unregister_push_device",
-                    buildJsonObject { put("p_installation_id", installation(context)) },
-                )
+        signingOut = true
+        try {
+            withTimeoutOrNull(4_000) {
+                registrationJob?.cancelAndJoin()
+                runCatching {
+                    FixoomSupabase.client.postgrest.rpc(
+                        "unregister_push_device",
+                        buildJsonObject { put("p_installation_id", installation(context)) },
+                    )
+                }
+                runCatching { FirebaseMessaging.getInstance().deleteToken().await() }
             }
-            runCatching { FirebaseMessaging.getInstance().deleteToken().await() }
+        } finally {
+            mutable.value = PushState(true, false)
+            context.getSystemService(android.app.NotificationManager::class.java).cancelAll()
         }
-        mutable.value = PushState(true, false)
     }
 }
 

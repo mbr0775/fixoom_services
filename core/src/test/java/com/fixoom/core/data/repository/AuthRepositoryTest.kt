@@ -82,6 +82,25 @@ class AuthRepositoryTest {
     }
 
     @Test
+    fun serverFailureStillClearsLocalCredentialsOnSignOut() = runBlocking {
+        fixture(logoutFailure = true).useClient { client, requests ->
+            client.auth.importSession(oldSession(), autoRefresh = false)
+            assertEquals(AuthResult.SignedOut, AuthRepository(client).signOut())
+            assertNull(client.auth.currentSessionOrNull())
+            assertTrue(requests.contains("/auth/v1/logout"))
+        }
+    }
+
+    @Test
+    fun signOutWithoutASessionIsIdempotent() = runBlocking {
+        fixture().useClient { client, requests ->
+            assertEquals(AuthResult.SignedOut, AuthRepository(client).signOut())
+            assertNull(client.auth.currentSessionOrNull())
+            assertFalse(requests.contains("/auth/v1/logout"))
+        }
+    }
+
+    @Test
     fun unconfirmedSignupDoesNotReadPrivateProfile() = runBlocking {
         fixture().useClient { client, requests ->
             assertEquals(AuthResult.EmailVerificationRequired, register(client))
@@ -182,6 +201,7 @@ class AuthRepositoryTest {
         signupRedirect: String? = null,
         signupPhone: String? = null,
         signupSkills: Boolean = false,
+        logoutFailure: Boolean = false,
     ): Fixture {
         val requests = mutableListOf<String>()
         val user =
@@ -244,7 +264,11 @@ class AuthRepositoryTest {
                         if (emptyProfile) "[]"
                         else
                             """[{"id":"$USER_ID","role":"$profileRole","account_status":"pending","full_name":"Fixture Professional","email":"$EMAIL"}]"""
-                    "/auth/v1/logout" -> "{}"
+                    "/auth/v1/logout" -> {
+                        assertEquals("local", request.url.parameters["scope"])
+                        if (logoutFailure) status = HttpStatusCode.ServiceUnavailable
+                        "{}"
+                    }
                     else -> error("Unexpected test request: $path")
                 }
             respond(response, status, headersOf(HttpHeaders.ContentType, "application/json"))

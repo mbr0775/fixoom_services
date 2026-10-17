@@ -49,4 +49,42 @@ class BookingTrackingTest {
         compose.onNodeWithText("Service completed.", substring = true).assertIsDisplayed()
         compose.onNodeWithText("Share live location for this job").assertDoesNotExist()
     }
+
+    @Test
+    fun failedLocationReadDoesNotPretendProviderStoppedSharing() {
+        compose.setContent {
+            Fixoom_ServicesTheme {
+                BookingTrackingCard(
+                    booking,
+                    null,
+                    false,
+                    {},
+                    locationError = "Live location could not be refreshed. Refresh to retry.",
+                )
+            }
+        }
+        compose
+            .onNodeWithText("Live location could not be refreshed. Refresh to retry.")
+            .assertIsDisplayed()
+        compose
+            .onNodeWithText(
+                "Live location is not currently shared, or the last position has expired."
+            )
+            .assertDoesNotExist()
+    }
+
+    @Test
+    fun loadingLocationIsDistinctFromNotShared() {
+        compose.setContent {
+            Fixoom_ServicesTheme {
+                BookingTrackingCard(booking, null, false, {}, locationLoading = true)
+            }
+        }
+        compose.onNodeWithText("Refreshing live location…").assertIsDisplayed()
+        compose
+            .onNodeWithText(
+                "Live location is not currently shared, or the last position has expired."
+            )
+            .assertDoesNotExist()
+    }
 }

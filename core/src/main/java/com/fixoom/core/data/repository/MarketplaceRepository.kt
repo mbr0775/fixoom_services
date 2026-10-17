@@ -34,6 +34,14 @@ data class MarketplaceSnapshot(
 
 class MarketplaceRepository(private val client: SupabaseClient = FixoomSupabase.client) {
 
+    internal fun isCurrentAccount(profileId: String?): Boolean =
+        profileId == client.auth.currentUserOrNull()?.id
+
+    internal suspend fun currentAccountId(): String? {
+        client.auth.awaitInitialization()
+        return client.auth.currentUserOrNull()?.id
+    }
+
     suspend fun snapshot(point: DiscoveryPoint? = null): MarketplaceSnapshot = coroutineScope {
         client.auth.awaitInitialization()
         val profile = async { AuthRepository(client).getCurrentProfile() }

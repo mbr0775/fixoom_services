@@ -19,8 +19,10 @@ data class MarketplaceState(
     val notice: String? = null,
 )
 
-class MarketplaceViewModel : ViewModel() {
-    private val repository = MarketplaceRepository()
+class MarketplaceViewModel(
+    private val repository: MarketplaceRepository = MarketplaceRepository(),
+    private val authRepository: AuthRepository = AuthRepository(),
+) : ViewModel() {
     private var discoveryPoint: DiscoveryPoint? = null
 
     fun setDiscoveryPoint(point: DiscoveryPoint?) {
@@ -45,7 +47,12 @@ class MarketplaceViewModel : ViewModel() {
     private suspend fun load() {
         loadingLock.withLock {
             try {
-                val data = withTimeout(15_000) { repository.snapshot(discoveryPoint) }
+                val (account, data) =
+                    withTimeout(15_000) {
+                        repository.currentAccountId() to repository.snapshot(discoveryPoint)
+                    }
+                // A response started before logout must not restore the previous account's data.
+                if (!repository.isCurrentAccount(account)) return@withLock
                 mutable.value = mutable.value.copy(data = data, loading = false, error = null)
             } catch (cancelled: CancellationException) {
                 if (cancelled is kotlinx.coroutines.TimeoutCancellationException)
@@ -66,13 +73,17 @@ class MarketplaceViewModel : ViewModel() {
         }
     }
 
-    fun runAction(onSaved: () -> Unit = {}, action: suspend MarketplaceRepository.() -> Unit) {
+    fun runAction(
+        onSaved: () -> Unit = {},
+        successNotice: String = "Changes saved.",
+        action: suspend MarketplaceRepository.() -> Unit,
+    ) {
         if (mutable.value.saving) return
         mutable.value = mutable.value.copy(saving = true, error = null, notice = null)
         viewModelScope.launch {
             try {
                 withTimeout(20_000) { repository.action() }
-                mutable.value = mutable.value.copy(notice = "Changes saved.")
+                mutable.value = mutable.value.copy(notice = successNotice)
                 load()
                 if (mutable.value.error == null) onSaved()
             } catch (cancelled: CancellationException) {
@@ -139,7 +150,7 @@ class MarketplaceViewModel : ViewModel() {
         mutable.value = mutable.value.copy(saving = true, error = null, notice = null)
         viewModelScope.launch {
             try {
-                val auth = AuthRepository()
+                val auth = authRepository
                 val result =
                     withTimeout(20_000) {
                         if (register) auth.register(name, email, phone, password, AppRole.CUSTOMER)
@@ -177,10 +188,14 @@ class MarketplaceViewModel : ViewModel() {
         }
     }
 
-    fun signOut() = runAction {
-        val result = AuthRepository().signOut()
-        check(result == AuthResult.SignedOut)
-    }
+    fun signOut() =
+        runAction(successNotice = "Signed out.") {
+            val result = authRepository.signOut()
+            check(result == AuthResult.SignedOut)
+            // Clear private cached data immediately, even if the following public refresh fails.
+            mutable.value =
+                mutable.value.copy(data = MarketplaceSnapshot(), error = null, notice = null)
+        }
 
     fun dismissNotice() {
         mutable.value = mutable.value.copy(notice = null, error = null)

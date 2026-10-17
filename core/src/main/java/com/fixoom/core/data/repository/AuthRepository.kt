@@ -7,12 +7,16 @@ import com.fixoom.core.model.AuthResult
 import com.fixoom.core.model.ContactPhone
 import com.fixoom.core.model.Profile
 import io.github.jan.supabase.SupabaseClient
+import io.github.jan.supabase.auth.SignOutScope
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.exception.AuthErrorCode
 import io.github.jan.supabase.auth.exception.AuthRestException
 import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.postgrest.from
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
@@ -253,21 +257,21 @@ class AuthRepository(private val client: SupabaseClient = FixoomSupabase.client)
     }
 
     suspend fun signOut(): AuthResult {
-        return try {
-            com.fixoom.core.data.notifications.PushMessaging.beforeSignOut()
-            client.auth.signOut()
-            AuthResult.SignedOut
+        try {
+            withTimeoutOrNull(4_000) {
+                com.fixoom.core.data.notifications.PushMessaging.beforeSignOut()
+            }
+            // Revoke this installation's session when reachable, without requiring the
+            // network to succeed before removing credentials from this phone.
+            withTimeoutOrNull(5_000) { client.auth.signOut(SignOutScope.LOCAL) }
         } catch (exception: CancellationException) {
             throw exception
-        } catch (exception: Exception) {
-            AuthResult.Error(
-                message =
-                    authErrorMessage(
-                        exception,
-                        "Sign out failed. Check your connection and try again.",
-                    )
-            )
+        } catch (_: Exception) {
+            // Remote revocation may be unavailable. Local sign-out must still complete.
+        } finally {
+            withContext(NonCancellable) { client.auth.clearSession() }
         }
+        return AuthResult.SignedOut
     }
 
     /** Confirmation links return to login; they do not bypass an explicit sign-in. */
@@ -354,14 +358,7 @@ class AuthRepository(private val client: SupabaseClient = FixoomSupabase.client)
     }
 
     private suspend fun clearCurrentSession() {
-        try {
-            com.fixoom.core.data.notifications.PushMessaging.beforeSignOut()
-            client.auth.signOut()
-        } catch (exception: CancellationException) {
-            throw exception
-        } catch (_: Exception) {
-            // Database RLS still protects restricted data.
-        }
+        signOut()
     }
 
     private fun validateRegistration(

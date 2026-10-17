@@ -165,7 +165,7 @@ class ProviderAuthViewModel(private val authRepository: AuthRepository = AuthRep
     }
 
     fun signOut() {
-        executeAuthRequest {
+        executeAuthRequest(keepCurrentRoute = true) {
             authRepository.signOut()
         }
     }
@@ -178,7 +178,10 @@ class ProviderAuthViewModel(private val authRepository: AuthRepository = AuthRep
         _uiState.value = _uiState.value.copy(result = null)
     }
 
-    private fun executeAuthRequest(request: suspend () -> AuthResult) {
+    private fun executeAuthRequest(
+        keepCurrentRoute: Boolean = false,
+        request: suspend () -> AuthResult,
+    ) {
         approvalJob?.cancel()
         _approvalStatus.value = ApprovalStatusState()
         authJob?.cancel()
@@ -186,7 +189,9 @@ class ProviderAuthViewModel(private val authRepository: AuthRepository = AuthRep
             _uiState.value =
                 ProviderAuthUiState(
                     isLoading = true,
-                    result = null,
+                    // Clearing this during logout makes Dashboard launch restoreSession(),
+                    // which cancels this auth job before it can finish signing out.
+                    result = if (keepCurrentRoute) _uiState.value.result else null,
                 )
 
             val result =

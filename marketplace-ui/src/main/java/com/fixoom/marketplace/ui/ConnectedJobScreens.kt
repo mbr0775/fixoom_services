@@ -212,7 +212,16 @@ fun ConnectedBookingDetails(
                         "The provider can now review your service request. Its status below updates as the job progresses.",
                     )
                 }
-            item { BookingTrackingCard(booking, current.location, provider, detail::refresh) }
+            item {
+                BookingTrackingCard(
+                    booking,
+                    current.location,
+                    provider,
+                    detail::refresh,
+                    current.locationError,
+                    current.extrasLoading,
+                )
+            }
             item {
                 InfoCard(serviceStatus(booking.status), serviceTime(booking.scheduledAt)) {
                     Text("Customer: ${booking.customerName.ifBlank { "Customer" }}")
@@ -276,7 +285,12 @@ fun ConnectedBookingDetails(
                 }
             item {
                 InfoCard("Booking history", "") {
-                    if (current.events.isEmpty()) Text("No recorded changes yet.")
+                    current.historyError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                    if (current.events.isEmpty() && current.historyError == null)
+                        Text(
+                            if (current.extrasLoading) "Loading booking history…"
+                            else "No recorded changes yet."
+                        )
                     current.events.forEach { event ->
                         Text(
                             "${serviceStatus(event.kind)} · ${serviceTime(event.createdAt)}",
@@ -286,7 +300,16 @@ fun ConnectedBookingDetails(
                 }
             }
             item { Text("Conversation", style = MaterialTheme.typography.titleLarge) }
-            if (current.messages.isEmpty())
+            current.messagesError?.let {
+                item { InfoCard("Messages unavailable", it, error = true) }
+            }
+            if (current.extrasLoading && current.messages.isEmpty())
+                item { Text("Loading messages…") }
+            if (
+                current.messages.isEmpty() &&
+                    current.messagesError == null &&
+                    !current.extrasLoading
+            )
                 item {
                     Text(
                         "Message your ${if(provider)"customer" else "provider"} about this service.",

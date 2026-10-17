@@ -2,6 +2,15 @@ package com.fixoom.core.data.repository
 
 import io.github.jan.supabase.exceptions.RestException
 
+fun bookingReadError(error: Exception): String =
+    when ((error as? RestException)?.statusCode) {
+        401 -> "Your session has expired. Sign in again to refresh this booking."
+        403 ->
+            "Your account cannot access this booking. Sign in with its customer or assigned provider account."
+        else ->
+            "This booking could not be refreshed. Any details shown are from the last successful load. Tap Refresh to retry."
+    }
+
 /** Allowlisted explanations only. Never render raw SDK messages, headers or database details. */
 fun marketplaceActionError(error: Exception): String {
     val remote = error as? RestException

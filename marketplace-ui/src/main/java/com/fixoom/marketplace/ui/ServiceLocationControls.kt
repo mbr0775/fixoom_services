@@ -100,6 +100,8 @@ fun BookingTrackingCard(
     location: JobLocation?,
     provider: Boolean,
     onRefresh: () -> Unit,
+    locationError: String? = null,
+    locationLoading: Boolean = false,
 ) {
     val context = LocalContext.current
     val sharing by JobLocationSharing.state.collectAsStateWithLifecycle()
@@ -153,7 +155,10 @@ fun BookingTrackingCard(
             error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         }
         if (active && !provider) {
-            if (location == null)
+            if (locationLoading) Text("Refreshing live location…")
+            else if (locationError != null)
+                Text(locationError, color = MaterialTheme.colorScheme.error)
+            else if (location == null)
                 Text("Live location is not currently shared, or the last position has expired.")
             else {
                 Text("Last position: ${serviceTime(location.updatedAt)}")

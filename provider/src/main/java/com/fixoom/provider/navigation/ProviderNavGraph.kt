@@ -284,8 +284,10 @@ fun ProviderNavGraph(
             } else {
                 ProviderSplashScreen()
 
-                LaunchedEffect(Unit) {
-                    authViewModel.restoreSession()
+                // Auth actions and terminal results own navigation. Restoring here during
+                // logout starts another auth request and cancels the sign-out coroutine.
+                if (uiState.result == null && !uiState.isLoading && !recoveryMode) {
+                    LaunchedEffect(Unit) { authViewModel.restoreSession() }
                 }
             }
         }
