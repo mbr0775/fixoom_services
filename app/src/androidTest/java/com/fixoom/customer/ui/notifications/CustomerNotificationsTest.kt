@@ -189,6 +189,64 @@ class CustomerNotificationsTest {
     }
 
     @Test
+    fun visibleTicketArtworkFloatsWithoutMovingTextAndStopsWithReducedMotion() {
+        // Start the infinite animation after taking manual control of the clock. The test
+        // runner deliberately cancels infinite animations when automatic advancement is on.
+        val motion = mutableStateOf(false)
+        show(motion = motion)
+        scrollTo(hasTestTag("notification-customer-fixture-unread"))
+        compose.mainClock.autoAdvance = false
+        compose.runOnIdle { motion.value = true }
+        compose.mainClock.advanceTimeBy(700)
+        compose.waitForIdle()
+        val card = compose.onNodeWithTag("notification-customer-fixture-unread")
+        val titleBounds = compose.onNodeWithText(first.title).fetchSemanticsNode().boundsInRoot
+        val before = card.captureToImage().asAndroidBitmap()
+        compose.mainClock.advanceTimeBy(1100)
+        compose.waitForIdle()
+        assertFalse(
+            "The visible card illustration must animate",
+            before.sameAs(card.captureToImage().asAndroidBitmap()),
+        )
+        assertEquals(
+            titleBounds,
+            compose.onNodeWithText(first.title).fetchSemanticsNode().boundsInRoot,
+        )
+        compose.runOnIdle { motion.value = false }
+        compose.mainClock.advanceTimeBy(500)
+        compose.waitForIdle()
+        val still = card.captureToImage().asAndroidBitmap()
+        compose.mainClock.advanceTimeBy(1500)
+        compose.waitForIdle()
+        assertTrue(
+            "Reduced motion must stop card artwork",
+            still.sameAs(card.captureToImage().asAndroidBitmap()),
+        )
+    }
+
+    @Test
+    fun ticketPressShowsDepthBeforeOneBookingOpenOnRelease() {
+        val opened = mutableListOf<String>()
+        show(motion = mutableStateOf(true), open = { opened += it })
+        scrollTo(hasTestTag("notification-customer-fixture-unread"))
+        compose.mainClock.autoAdvance = false
+        compose.mainClock.advanceTimeBy(700)
+        val card = compose.onNodeWithTag("notification-customer-fixture-unread")
+        val before = card.fetchSemanticsNode().boundsInRoot.width
+        card.performTouchInput { down(center) }
+        compose.mainClock.advanceTimeBy(300)
+        compose.waitForIdle()
+        compose.runOnIdle { assertTrue(opened.isEmpty()) }
+        assertTrue(
+            "Press should compress the ticket face",
+            card.fetchSemanticsNode().boundsInRoot.width < before,
+        )
+        card.performTouchInput { up() }
+        compose.mainClock.advanceTimeBy(400)
+        compose.runOnIdle { assertEquals(listOf("fixture-booking-a"), opened) }
+    }
+
+    @Test
     fun sculptureMovesWhileHeadlineStaysStillAndReducedMotionStopsFrames() {
         compose.mainClock.autoAdvance = false
         val motion = mutableStateOf(true)

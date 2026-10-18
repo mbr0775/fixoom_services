@@ -5,8 +5,6 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
 import androidx.compose.foundation.selection.selectableGroup
@@ -14,7 +12,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -29,8 +26,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.fixoom.core.data.repository.MarketplaceState
-import com.fixoom.core.model.BookingNotification
-import com.fixoom.core.model.serviceTime
 
 @Composable
 internal fun CustomerInboxPage(
@@ -304,150 +299,6 @@ internal fun CustomerInboxControls(
                 modifier = Modifier.size(48.dp),
             ) {
                 Icon(Icons.Rounded.DoneAll, "Mark all as read", Modifier.size(22.dp))
-            }
-        }
-    }
-}
-
-@Composable
-internal fun CustomerNotificationTile(
-    alert: BookingNotification,
-    index: Int,
-    enabled: Boolean,
-    motion: Boolean,
-    depth: () -> Float,
-    open: () -> Unit,
-) {
-    val source = remember { MutableInteractionSource() }
-    val pressed by source.collectIsPressedAsState()
-    val pressure =
-        animateFloatAsState(
-            if (motion && pressed) 1f else 0f,
-            spring(stiffness = Spring.StiffnessMedium),
-            label = "customer_update_press",
-        )
-    val entrance = remember(alert.id) { Animatable(if (motion) 0f else 1f) }
-    LaunchedEffect(alert.id, motion) {
-        if (motion)
-            entrance.animateTo(1f, tween(320, index.coerceAtMost(3) * 35, FastOutSlowInEasing))
-        else entrance.snapTo(1f)
-    }
-    val unread = alert.readAt == null
-    val art = notificationArtwork(alert.kind)
-    val light = MaterialTheme.colorScheme.background.luminance() > .5f
-    val color = if (unread && light) Color(0xFFF0F4E9) else MaterialTheme.colorScheme.surface
-    Card(
-        onClick = open,
-        enabled = enabled,
-        interactionSource = source,
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = color),
-        border =
-            BorderStroke(
-                1.dp,
-                if (unread) MaterialTheme.colorScheme.primary.copy(alpha = .18f)
-                else MaterialTheme.colorScheme.outline.copy(alpha = .45f),
-            ),
-        modifier =
-            Modifier.fillMaxWidth()
-                .testTag("notification-${alert.id}")
-                .semantics { stateDescription = if (unread) "Unread" else "Read" }
-                .graphicsLayer {
-                    val progress = if (motion) entrance.value else 1f
-                    val press = if (motion) pressure.value else 0f
-                    alpha = .5f + progress * .5f
-                    translationY = (1 - progress) * 12.dp.toPx()
-                    scaleX = 1 - press * .02f
-                    scaleY = scaleX
-                    rotationX = (1 - progress) * 7f
-                    cameraDistance = 24 * density
-                },
-    ) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Box(
-                    Modifier.size(52.dp)
-                        .clearAndSetSemantics {}
-                        .graphicsLayer {
-                            rotationY = if (motion) -16f + depth() * 12f else -16f
-                            rotationX = if (motion) 10f - pressure.value * 5f else 10f
-                            rotationZ = -8f
-                            translationY = if (motion) -pressure.value * 3.dp.toPx() else 0f
-                            cameraDistance = 18 * density
-                        }
-                ) {
-                    Box(
-                        Modifier.size(46.dp)
-                            .offset(x = 3.dp, y = 4.dp)
-                            .clip(RoundedCornerShape(15.dp))
-                            .background(InboxTeal.copy(alpha = .3f))
-                    )
-                    Box(
-                        Modifier.size(46.dp)
-                            .graphicsLayer {
-                                    shadowElevation = 1.5.dp.toPx()
-                                shape = RoundedCornerShape(15.dp)
-                                clip = true
-                            }
-                            .background(
-                                Brush.linearGradient(listOf(Color.White, art.second, art.second))
-                            ),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(art.first, null, Modifier.size(24.dp), tint = InboxTeal)
-                    }
-                }
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(
-                        alert.title,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                    Text(
-                        serviceTime(alert.createdAt),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                if (unread)
-                    Box(
-                        Modifier.size(8.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primary)
-                            .semantics { contentDescription = "Unread update" }
-                    )
-            }
-            Text(
-                alert.body,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Row(
-                Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Text(
-                    "View booking",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-                Surface(
-                    shape = CircleShape,
-                    color = if (unread) InboxLime else MaterialTheme.colorScheme.surfaceVariant,
-                ) {
-                    Icon(
-                        Icons.AutoMirrored.Rounded.ArrowForward,
-                        null,
-                        Modifier.padding(7.dp).size(16.dp),
-                        tint =
-                            if (unread) InboxTeal else MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
             }
         }
     }

@@ -201,7 +201,15 @@ fun NotificationsInbox(
                     onRead(alert.id)
                     onOpen(alert.bookingId)
                 }
-                if (customerDesign)
+                if (customerDesign) {
+                    val cardVisible by
+                        remember(alert.id) {
+                            derivedStateOf {
+                                list.layoutInfo.visibleItemsInfo.any {
+                                    it.key == "alert-${alert.id}"
+                                }
+                            }
+                        }
                     CustomerNotificationTile(
                         alert,
                         index,
@@ -209,8 +217,9 @@ fun NotificationsInbox(
                         motionEnabled,
                         depth,
                         open,
+                        floating = motionEnabled && cardVisible && !list.isScrollInProgress,
                     )
-                else NotificationTile(alert, index, !state.saving, motionEnabled, depth, open)
+                } else NotificationTile(alert, index, !state.saving, motionEnabled, depth, open)
             }
             if (notifications.isNotEmpty())
                 item {
