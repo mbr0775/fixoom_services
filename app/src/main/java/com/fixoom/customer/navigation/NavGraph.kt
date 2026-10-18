@@ -109,7 +109,7 @@ fun NavGraph(
             )
         }
         composable(Screen.Alerts.route) {
-            ConnectedNotifications(market, openBooking, openAccount, back)
+            ConnectedNotifications(market, openBooking, openAccount, back, customerDesign = true)
         }
         composable("account") { ConnectedAccount(market, back) }
         composable("support") { ConnectedSupport(market, onBack = back) }

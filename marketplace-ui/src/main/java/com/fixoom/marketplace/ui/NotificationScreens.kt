@@ -27,6 +27,7 @@ fun ConnectedNotifications(
     onOpen: (String) -> Unit,
     onAccount: () -> Unit,
     onBack: () -> Unit,
+    customerDesign: Boolean = false,
 ) {
     val state by vm.state.collectAsStateWithLifecycle()
     val push by PushMessaging.state.collectAsStateWithLifecycle()
@@ -57,6 +58,7 @@ fun ConnectedNotifications(
         state = state,
         push = push,
         alertsAllowed = alertsAllowed,
+        customerDesign = customerDesign,
         phoneError = settingsError ?: push.error,
         onRefresh = vm::refresh,
         onBack = onBack,

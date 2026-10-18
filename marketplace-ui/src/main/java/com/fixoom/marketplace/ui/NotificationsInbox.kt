@@ -5,6 +5,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -45,6 +46,7 @@ fun NotificationsInbox(
     onEnableAlerts: () -> Unit,
     phoneError: String? = push.error,
     motionEnabled: Boolean = rememberMarketplaceMotionAllowed(),
+    customerDesign: Boolean = false,
 ) {
     val signedIn = state.data.profile != null
     val notifications = state.data.notifications
@@ -64,23 +66,27 @@ fun NotificationsInbox(
             else -> "All updates read"
         }
     // Read state/counts provide confirmation; unrelated workspace save notices do not belong here.
-    MarketplacePage(
-        "Notifications",
-        state.copy(notice = null),
-        onRefresh,
-        onBack,
-        listState = list,
-    ) {
+    val content: LazyListScope.() -> Unit = {
         item(key = "inbox-hero") {
-            NotificationHero(
-                heroSummary,
-                motionEnabled && heroVisible,
-                motionEnabled && heroVisible && !list.isScrollInProgress,
-            ) {
+            val offset = {
                 list.layoutInfo.visibleItemsInfo
                     .firstOrNull { it.key == "inbox-hero" }
                     ?.let { (-it.offset).coerceAtLeast(0).toFloat() } ?: 180f
             }
+            if (customerDesign)
+                CustomerInboxHero(
+                    heroSummary,
+                    motionEnabled && heroVisible,
+                    motionEnabled && heroVisible && !list.isScrollInProgress,
+                    offset,
+                )
+            else
+                NotificationHero(
+                    heroSummary,
+                    motionEnabled && heroVisible,
+                    motionEnabled && heroVisible && !list.isScrollInProgress,
+                    offset,
+                )
         }
         if (!signedIn) {
             item {
@@ -100,56 +106,71 @@ fun NotificationsInbox(
                     state.saving,
                     onConnect,
                     onEnableAlerts,
+                    compact = customerDesign,
                 )
             }
             item(key = "inbox-controls") {
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    FlowRow(
-                        Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
-                    ) {
-                        Text(
-                            "Recent activity",
-                            Modifier.align(Alignment.CenterVertically),
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.SemiBold,
-                        )
-                        TextButton(
-                            onClick = { onRead(null) },
-                            enabled = unread > 0 && !state.saving,
-                            modifier = Modifier.heightIn(min = 48.dp),
+                if (customerDesign)
+                    CustomerInboxControls(
+                        notifications.size,
+                        unread,
+                        unreadOnly,
+                        !state.saving,
+                        { unreadOnly = it },
+                        { onRead(null) },
+                        motionEnabled,
+                    )
+                else
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        FlowRow(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
                         ) {
-                            Icon(Icons.Rounded.DoneAll, null, Modifier.size(18.dp))
-                            Spacer(Modifier.width(6.dp))
-                            Text("Mark all as read")
+                            Text(
+                                "Recent activity",
+                                Modifier.align(Alignment.CenterVertically),
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                            TextButton(
+                                onClick = { onRead(null) },
+                                enabled = unread > 0 && !state.saving,
+                                modifier = Modifier.heightIn(min = 48.dp),
+                            ) {
+                                Icon(Icons.Rounded.DoneAll, null, Modifier.size(18.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text("Mark all as read")
+                            }
+                        }
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            FilterChip(
+                                selected = !unreadOnly,
+                                onClick = { unreadOnly = false },
+                                label = { Text("All (${notifications.size})") },
+                                leadingIcon = {
+                                    Icon(Icons.Rounded.Inbox, null, Modifier.size(18.dp))
+                                },
+                                shape = RoundedCornerShape(14.dp),
+                                modifier =
+                                    Modifier.heightIn(min = 48.dp).testTag("inbox-filter-all"),
+                            )
+                            FilterChip(
+                                selected = unreadOnly,
+                                onClick = { unreadOnly = true },
+                                label = { Text("Unread ($unread)") },
+                                leadingIcon = {
+                                    Icon(Icons.Rounded.MarkEmailUnread, null, Modifier.size(18.dp))
+                                },
+                                shape = RoundedCornerShape(14.dp),
+                                modifier =
+                                    Modifier.heightIn(min = 48.dp).testTag("inbox-filter-unread"),
+                            )
                         }
                     }
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
-                    ) {
-                        FilterChip(
-                            selected = !unreadOnly,
-                            onClick = { unreadOnly = false },
-                            label = { Text("All (${notifications.size})") },
-                            leadingIcon = { Icon(Icons.Rounded.Inbox, null, Modifier.size(18.dp)) },
-                            shape = RoundedCornerShape(14.dp),
-                            modifier = Modifier.heightIn(min = 48.dp).testTag("inbox-filter-all"),
-                        )
-                        FilterChip(
-                            selected = unreadOnly,
-                            onClick = { unreadOnly = true },
-                            label = { Text("Unread ($unread)") },
-                            leadingIcon = {
-                                Icon(Icons.Rounded.MarkEmailUnread, null, Modifier.size(18.dp))
-                            },
-                            shape = RoundedCornerShape(14.dp),
-                            modifier =
-                                Modifier.heightIn(min = 48.dp).testTag("inbox-filter-unread"),
-                        )
-                    }
-                }
             }
             if (visible.isEmpty() && !state.loading && state.error == null) {
                 item(key = "inbox-empty") {
@@ -164,29 +185,32 @@ fun NotificationsInbox(
                 }
             }
             itemsIndexed(visible, key = { _, alert -> "alert-${alert.id}" }) { index, alert ->
-                NotificationTile(
-                    alert,
-                    index,
-                    !state.saving,
-                    motionEnabled,
-                    depth = {
-                        val layout = list.layoutInfo
-                        val item =
-                            layout.visibleItemsInfo.firstOrNull { it.key == "alert-${alert.id}" }
-                        if (item == null) 0f
-                        else {
-                            val height =
-                                (layout.viewportEndOffset - layout.viewportStartOffset)
-                                    .coerceAtLeast(1)
-                            ((item.offset + item.size / 2f - layout.viewportStartOffset) / height *
-                                    2 - 1)
-                                .coerceIn(-1f, 1f)
-                        }
-                    },
-                ) {
+                val depth = {
+                    val layout = list.layoutInfo
+                    val item = layout.visibleItemsInfo.firstOrNull { it.key == "alert-${alert.id}" }
+                    if (item == null) 0f
+                    else {
+                        val height =
+                            (layout.viewportEndOffset - layout.viewportStartOffset).coerceAtLeast(1)
+                        ((item.offset + item.size / 2f - layout.viewportStartOffset) / height * 2 -
+                                1)
+                            .coerceIn(-1f, 1f)
+                    }
+                }
+                val open = {
                     onRead(alert.id)
                     onOpen(alert.bookingId)
                 }
+                if (customerDesign)
+                    CustomerNotificationTile(
+                        alert,
+                        index,
+                        !state.saving,
+                        motionEnabled,
+                        depth,
+                        open,
+                    )
+                else NotificationTile(alert, index, !state.saving, motionEnabled, depth, open)
             }
             if (notifications.isNotEmpty())
                 item {
@@ -199,6 +223,16 @@ fun NotificationsInbox(
                 }
         }
     }
+    if (customerDesign) CustomerInboxPage(state, onRefresh, onBack, list, content)
+    else
+        MarketplacePage(
+            "Notifications",
+            state.copy(notice = null),
+            onRefresh,
+            onBack,
+            listState = list,
+            content = content,
+        )
 }
 
 @Composable
@@ -209,8 +243,13 @@ private fun PhoneAlertCard(
     busy: Boolean,
     connect: () -> Unit,
     enable: () -> Unit,
+    compact: Boolean = false,
 ) {
     val connected = push.configured && push.registered && allowed
+    if (compact && connected && error == null) {
+        CustomerPhoneStatus()
+        return
+    }
     val title =
         when {
             !push.configured -> "In-app updates"
@@ -454,7 +493,7 @@ private fun NotificationTile(
     }
 }
 
-private fun notificationArtwork(kind: String): Pair<ImageVector, Color> =
+internal fun notificationArtwork(kind: String): Pair<ImageVector, Color> =
     when (kind) {
         "requested" -> Icons.Rounded.Handyman to Color(0xFFD3EEDC)
         "accepted" -> Icons.Rounded.TaskAlt to Color(0xFFD3EEE7)
