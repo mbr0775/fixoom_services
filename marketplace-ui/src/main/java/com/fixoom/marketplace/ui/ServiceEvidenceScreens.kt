@@ -52,7 +52,12 @@ private fun InputStream.readEvidenceBytes(): ByteArray {
 
 /** Shared by both participants. No broad storage or camera permissions are requested. */
 @Composable
-fun ServiceEvidencePanel(contextId: String, complaint: Boolean = false, canUpload: Boolean = true) {
+fun ServiceEvidencePanel(
+    contextId: String,
+    complaint: Boolean = false,
+    canUpload: Boolean = true,
+    modern: Boolean = false,
+) {
     val repository = remember { ServiceEvidenceRepository() }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -142,7 +147,8 @@ fun ServiceEvidencePanel(contextId: String, complaint: Boolean = false, canUploa
                 }
         }
     BackHandler(busy) { /* Prevent leaving an in-flight upload through the system Back action. */ }
-    InfoCard(
+    EvidenceCard(
+        modern,
         if (complaint) "Complaint evidence" else "Booking photos & videos",
         if (complaint) "Private to you and the administrator. Add up to five files."
         else

@@ -177,7 +177,7 @@ class ConnectedWorkflowTest {
             .performTextInput("Fixoom connected workflow test: repair the kitchen tap.")
         click("Send booking request")
         waitFor("Your request is saved")
-        scroll("Write a message")
+        click("Messages")
         compose.onNodeWithText("Write a message").performTextInput("Customer integration message")
         click("Send message")
         compose.waitUntil(30_000) { !market.state.value.saving }
@@ -268,12 +268,14 @@ class ConnectedWorkflowTest {
             }
         }
         waitFor("Provider has recorded payment received.")
+        click("Messages")
         waitFor("Provider integration reply")
         assertTrue(
             runBlocking { repository.events(booking.id) }
                 .any { it.kind == "direct_payment_received" }
         )
-        compose.onNode(hasScrollToIndexAction()).performScrollToIndex(0)
+        click("Overview")
+        scroll("Provider has recorded payment received.")
         shot("customer-receipt")
     }
 

@@ -1,5 +1,7 @@
 package com.fixoom.marketplace.ui
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -10,6 +12,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -184,193 +187,247 @@ fun ConnectedBookingDetails(
         ConnectedSupport(vm, id) { support = false }
         return
     }
-    MarketplacePage(
-        if (confirmation) "Request sent" else booking?.reference ?: "Booking details",
-        state.copy(loading = state.loading || current.loading),
-        {
-            vm.refresh()
-            detail.refresh()
-        },
-        onBack,
-    ) {
-        current.error?.let { item { InfoCard("Could not refresh", it, error = true) } }
-        if (booking == null && !current.loading)
-            item {
-                InfoCard(
-                    "Booking unavailable",
-                    "Sign in with the account that owns this booking and refresh.",
-                )
-            }
-        if (booking != null) {
-            if (provider)
-                item {
-                    WorkspaceDepthHeader(
-                        booking.categoryName.ifBlank { serviceStatus(booking.categorySlug) },
-                        "${serviceStatus(booking.status)} / ${booking.durationMinutes} minutes reserved",
-                        Icons.Rounded.Handyman,
-                    )
+    val context = LocalContext.current
+    var mapError by remember(id) { mutableStateOf<String?>(null) }
+    if (!provider)
+        CustomerBookingDetailsScreen(
+            state = state,
+            detail = current,
+            confirmation = confirmation,
+            message = message,
+            onMessageChange = { if (it.length <= 2000) message = it },
+            onSend = { body ->
+                vm.runAction {
+                    sendMessage(id, body)
+                    message = ""
+                    detail.refresh()
                 }
-            if (confirmation)
+            },
+            onRefresh = {
+                vm.refresh()
+                detail.refresh()
+            },
+            onBack = onBack,
+            onCancel = {
+                vm.runAction {
+                    changeStatus(id, "cancelled")
+                    detail.refresh()
+                }
+            },
+            onSupport = { support = true },
+            mapError = mapError,
+            onMap = { position ->
+                mapError = null
+                runCatching {
+                        context.startActivity(
+                            Intent(
+                                Intent.ACTION_VIEW,
+                                Uri.parse(
+                                    "geo:${position.latitude},${position.longitude}?q=${position.latitude},${position.longitude}"
+                                ),
+                            )
+                        )
+                    }
+                    .onFailure { mapError = "No maps application is available on this phone." }
+            },
+            evidence = { ServiceEvidencePanel(id, modern = true) },
+        )
+    else
+        MarketplacePage(
+            if (confirmation) "Request sent" else booking?.reference ?: "Booking details",
+            state.copy(loading = state.loading || current.loading),
+            {
+                vm.refresh()
+                detail.refresh()
+            },
+            onBack,
+        ) {
+            current.error?.let { item { InfoCard("Could not refresh", it, error = true) } }
+            if (booking == null && !current.loading)
                 item {
                     InfoCard(
-                        "Your request is saved",
-                        "The provider can now review your service request. Its status below updates as the job progresses.",
+                        "Booking unavailable",
+                        "Sign in with the account that owns this booking and refresh.",
                     )
                 }
-            item {
-                BookingTrackingCard(
-                    booking,
-                    current.location,
-                    provider,
-                    detail::refresh,
-                    current.locationError,
-                    current.extrasLoading,
-                )
-            }
-            item {
-                InfoCard(serviceStatus(booking.status), serviceTime(booking.scheduledAt)) {
-                    Text("Customer: ${booking.customerName.ifBlank { "Customer" }}")
-                    Text("Professional: ${booking.providerName.ifBlank { "Service provider" }}")
-                    Text(
-                        "Service: ${booking.categoryName.ifBlank { serviceStatus(booking.categorySlug) }}"
-                    )
-                    Text("Reserved time: ${booking.durationMinutes} minutes")
-                    Text(booking.serviceAddress)
-                    Text(booking.problemDescription)
-                }
-            }
-            item {
-                InfoCard(
-                    "Direct payment",
-                    if (booking.finalAmount == null)
-                        "Agree the price with your provider before work starts. Pay the provider directly after service."
-                    else
-                        "Final amount: ${booking.currency} ${String.format(Locale.US,"%.2f",booking.finalAmount)}\n${if(booking.directPaymentReceived)"Provider has recorded payment received." else "Payment has not been recorded as received."}",
-                )
-            }
-            if (provider && !booking.isClosed)
+            if (booking != null) {
+                if (provider)
+                    item {
+                        WorkspaceDepthHeader(
+                            booking.categoryName.ifBlank { serviceStatus(booking.categorySlug) },
+                            "${serviceStatus(booking.status)} / ${booking.durationMinutes} minutes reserved",
+                            Icons.Rounded.Handyman,
+                        )
+                    }
+                if (confirmation)
+                    item {
+                        InfoCard(
+                            "Your request is saved",
+                            "The provider can now review your service request. Its status below updates as the job progresses.",
+                        )
+                    }
                 item {
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        when (booking.status) {
-                            "requested" -> {
-                                Button({ action = "accepted" }, enabled = !state.saving) {
-                                    Text("Accept request")
+                    BookingTrackingCard(
+                        booking,
+                        current.location,
+                        provider,
+                        detail::refresh,
+                        current.locationError,
+                        current.extrasLoading,
+                    )
+                }
+                item {
+                    InfoCard(serviceStatus(booking.status), serviceTime(booking.scheduledAt)) {
+                        Text("Customer: ${booking.customerName.ifBlank { "Customer" }}")
+                        Text("Professional: ${booking.providerName.ifBlank { "Service provider" }}")
+                        Text(
+                            "Service: ${booking.categoryName.ifBlank { serviceStatus(booking.categorySlug) }}"
+                        )
+                        Text("Reserved time: ${booking.durationMinutes} minutes")
+                        Text(booking.serviceAddress)
+                        Text(booking.problemDescription)
+                    }
+                }
+                item {
+                    InfoCard(
+                        "Direct payment",
+                        if (booking.finalAmount == null)
+                            "Agree the price with your provider before work starts. Pay the provider directly after service."
+                        else
+                            "Final amount: ${booking.currency} ${String.format(Locale.US,"%.2f",booking.finalAmount)}\n${if(booking.directPaymentReceived)"Provider has recorded payment received." else "Payment has not been recorded as received."}",
+                    )
+                }
+                if (provider && !booking.isClosed)
+                    item {
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            when (booking.status) {
+                                "requested" -> {
+                                    Button({ action = "accepted" }, enabled = !state.saving) {
+                                        Text("Accept request")
+                                    }
+                                    OutlinedButton(
+                                        { action = "rejected" },
+                                        enabled = !state.saving,
+                                    ) {
+                                        Text("Decline")
+                                    }
                                 }
-                                OutlinedButton({ action = "rejected" }, enabled = !state.saving) {
-                                    Text("Decline")
-                                }
+                                "accepted" ->
+                                    Button({ action = "in_progress" }, enabled = !state.saving) {
+                                        Text("Start job")
+                                    }
+                                "in_progress" ->
+                                    Button({ action = "completed" }, enabled = !state.saving) {
+                                        Text("Complete job")
+                                    }
                             }
-                            "accepted" ->
-                                Button({ action = "in_progress" }, enabled = !state.saving) {
-                                    Text("Start job")
-                                }
-                            "in_progress" ->
-                                Button({ action = "completed" }, enabled = !state.saving) {
-                                    Text("Complete job")
-                                }
+                        }
+                    }
+                if (!provider && booking.customerCanCancel)
+                    item {
+                        OutlinedButton({ action = "cancelled" }, enabled = !state.saving) {
+                            Text("Cancel booking")
+                        }
+                    }
+                if (
+                    provider &&
+                        booking.status == "completed" &&
+                        booking.finalAmount != null &&
+                        !booking.directPaymentReceived
+                )
+                    item {
+                        Button({ action = "payment" }, enabled = !state.saving) {
+                            Text("Record payment received")
+                        }
+                    }
+                item {
+                    InfoCard("Booking history", "") {
+                        current.historyError?.let {
+                            Text(it, color = MaterialTheme.colorScheme.error)
+                        }
+                        if (current.events.isEmpty() && current.historyError == null)
+                            Text(
+                                if (current.extrasLoading) "Loading booking history…"
+                                else "No recorded changes yet."
+                            )
+                        current.events.forEach { event ->
+                            Text(
+                                "${serviceStatus(event.kind)} · ${serviceTime(event.createdAt)}",
+                                style = MaterialTheme.typography.bodySmall,
+                            )
                         }
                     }
                 }
-            if (!provider && booking.customerCanCancel)
+                item { ServiceEvidencePanel(id) }
                 item {
-                    OutlinedButton({ action = "cancelled" }, enabled = !state.saving) {
-                        Text("Cancel booking")
+                    OutlinedButton({ support = true }, modifier = Modifier.fillMaxWidth()) {
+                        Icon(Icons.Rounded.SupportAgent, null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Report an issue privately")
                     }
                 }
-            if (
-                provider &&
-                    booking.status == "completed" &&
-                    booking.finalAmount != null &&
-                    !booking.directPaymentReceived
-            )
-                item {
-                    Button({ action = "payment" }, enabled = !state.saving) {
-                        Text("Record payment received")
-                    }
+                item { Text("Conversation", style = MaterialTheme.typography.titleLarge) }
+                current.messagesError?.let {
+                    item { InfoCard("Messages unavailable", it, error = true) }
                 }
-            item {
-                InfoCard("Booking history", "") {
-                    current.historyError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-                    if (current.events.isEmpty() && current.historyError == null)
+                if (current.extrasLoading && current.messages.isEmpty())
+                    item { Text("Loading messages…") }
+                if (
+                    current.messages.isEmpty() &&
+                        current.messagesError == null &&
+                        !current.extrasLoading
+                )
+                    item {
                         Text(
-                            if (current.extrasLoading) "Loading booking history…"
-                            else "No recorded changes yet."
+                            "Message your ${if(provider)"customer" else "provider"} about this service.",
+                            style = MaterialTheme.typography.bodyMedium,
                         )
-                    current.events.forEach { event ->
+                    }
+                items(current.messages, key = { it.id }) { chat ->
+                    InfoCard(
+                        if (chat.senderId == state.data.profile?.id) "You"
+                        else if (provider) booking.customerName.ifBlank { "Customer" }
+                        else booking.providerName.ifBlank { "Provider" },
+                        chat.body,
+                    ) {
                         Text(
-                            "${serviceStatus(event.kind)} · ${serviceTime(event.createdAt)}",
+                            serviceTime(chat.createdAt),
+                            style = MaterialTheme.typography.labelSmall,
+                        )
+                    }
+                }
+                item {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        OutlinedTextField(
+                            message,
+                            { if (it.length <= 2000) message = it },
+                            Modifier.fillMaxWidth(),
+                            label = { Text("Write a message") },
+                            minLines = 2,
+                            enabled = !state.saving,
+                        )
+                        Button(
+                            {
+                                val body = message
+                                vm.runAction {
+                                    sendMessage(id, body)
+                                    message = ""
+                                    detail.refresh()
+                                }
+                            },
+                            enabled = message.isNotBlank() && !state.saving,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text("Send message")
+                        }
+                        Text(
+                            "Messages update while this conversation is open. Showing the latest 100 messages.",
                             style = MaterialTheme.typography.bodySmall,
                         )
                     }
                 }
             }
-            item { ServiceEvidencePanel(id) }
-            item {
-                OutlinedButton({ support = true }, modifier = Modifier.fillMaxWidth()) {
-                    Icon(Icons.Rounded.SupportAgent, null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Report an issue privately")
-                }
-            }
-            item { Text("Conversation", style = MaterialTheme.typography.titleLarge) }
-            current.messagesError?.let {
-                item { InfoCard("Messages unavailable", it, error = true) }
-            }
-            if (current.extrasLoading && current.messages.isEmpty())
-                item { Text("Loading messages…") }
-            if (
-                current.messages.isEmpty() &&
-                    current.messagesError == null &&
-                    !current.extrasLoading
-            )
-                item {
-                    Text(
-                        "Message your ${if(provider)"customer" else "provider"} about this service.",
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                }
-            items(current.messages, key = { it.id }) { chat ->
-                InfoCard(
-                    if (chat.senderId == state.data.profile?.id) "You"
-                    else if (provider) booking.customerName.ifBlank { "Customer" }
-                    else booking.providerName.ifBlank { "Provider" },
-                    chat.body,
-                ) {
-                    Text(serviceTime(chat.createdAt), style = MaterialTheme.typography.labelSmall)
-                }
-            }
-            item {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    OutlinedTextField(
-                        message,
-                        { if (it.length <= 2000) message = it },
-                        Modifier.fillMaxWidth(),
-                        label = { Text("Write a message") },
-                        minLines = 2,
-                        enabled = !state.saving,
-                    )
-                    Button(
-                        {
-                            val body = message
-                            vm.runAction {
-                                sendMessage(id, body)
-                                message = ""
-                                detail.refresh()
-                            }
-                        },
-                        enabled = message.isNotBlank() && !state.saving,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text("Send message")
-                    }
-                    Text(
-                        "Messages update while this conversation is open. Showing the latest 100 messages.",
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
-            }
         }
-    }
     action?.let { next ->
         AlertDialog(
             onDismissRequest = { if (!state.saving) action = null },
